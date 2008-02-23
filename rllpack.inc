@@ -34,35 +34,39 @@
 ;	Returns updated SI and EDI.
 ;
 rllpack:
-		push word .pmentry
-		call simple_pm_call
+		push cx
+		push edx
+		mov dx,.pm
+		call pm_call
+		pop edx
+		pop cx
 		ret
 
-.pmentry:
-		push cx
-		push ebx
-		push edx
+		bits 32
+.pm:
 .startseq:
-		xor ax,ax		; Zero byte
+		movzx esi,si
+		xor eax,eax		; Zero byte
 		xor ebx,ebx		; Run length zero
+		movzx ecx,cx
 		dec edi
 		mov edx,edi		; Pointer to header byte
 		mov [edi],al		; Create header byte
-		jcxz .done		; If done, this was the terminator
+		jecxz .done		; If done, this was the terminator
 .stdbyte:
 		lodsb
 		dec edi
 		mov [edi],al
-		dec cx
+		dec ecx
 		cmp ah,al
 		je .same
 .diff:
 		mov ah,al
-		xor bx,bx
+		xor ebx,ebx
 .plainbyte:
-		inc bx
+		inc ebx
 		inc byte [edx]
-		jcxz .startseq
+		jecxz .startseq
 		jns .stdbyte
 		jmp .startseq
 .same:
@@ -74,7 +78,7 @@ rllpack:
 		inc edi			; We killed a whole stretch,
 					; drop start byte
 .normal:
-		inc bx
+		inc ebx
 		add edi,ebx		; Remove the stored run bytes
 .getrun:
 		jcxz .nomatch
@@ -83,11 +87,11 @@ rllpack:
 		jne .nomatch
 		cmp bx,(256-224)*256-1	; Maximum run size
 		jae .nomatch
-		inc bx
-		dec cx
+		inc ebx
+		dec ecx
 		jmp .getrun
 .nomatch:
-		cmp bx,224-126
+		cmp ebx,224-126
 		jae .twobyte
 .onebyte:
 		add bl,126
@@ -101,30 +105,33 @@ rllpack:
 .storebyte:
 		dec edi
 		mov [edi],ah
-		dec si			; Reload subsequent byte
+		dec esi			; Reload subsequent byte
 		jmp .startseq
 .done:
-		pop edx
-		pop ebx
-		pop cx
 		ret
+
 ;
 ; rllunpack:
 ;	Unpack bytes from ESI into DI
 ;	On return ESI, DI are updated and CX contains number of bytes output.
 ;
+		bits 16
 rllunpack:
-		push word .pmentry
-		call simple_pm_call
+		push edx
+		mov dx,.pm
+		call pm_call
+		pop edx
 		ret
 
-.pmentry:
-		push di
-		xor cx,cx
+		bits 32
+.pm:
+		movzx edi,di
+		push edi
+		xor ecx,ecx
 .header:
 		dec esi
 		mov cl,[esi]
-		jcxz .done
+		jecxz .done
 		cmp cl,129
 		jae .isrun
 		; Not a run
@@ -150,7 +157,9 @@ rllunpack:
 		mov cl,[esi]
 		jmp .dorun
 .done:
-		pop cx
-		sub cx,di
-		neg cx
+		pop ecx
+		sub ecx,edi
+		neg ecx
 		ret
+
+		bits 16

@@ -370,7 +370,7 @@ DisplayCon	dw 01h			; Console display enabled
 
 ScrollAttribute	db 07h			; Grey on white (normal text color)
 
-		section .bss
+		section .bss1
 		alignb 2
 NextCharJump    resw 1			; Routine to interpret next print char
 CursorDX        equ $

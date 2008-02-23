@@ -58,13 +58,13 @@ STACK_START	equ TEXT_START-STACK_SIZE
 		; seems that it gets confused and screws up the
 		; pointer to its own internal packet buffer and starts
 		; writing a received ARP packet into low memory.
-%if IS_PXELINUX
+%if 0 ; IS_PXELINUX
 		section .rbfg		nobits start=0x5680
 RBFG_brainfuck:	resb 2048		; Bigger than an Ethernet packet...
 %endif
 
 		; For section following .rbfg
-%if IS_PXELINUX
+%if 0 ; IS_PXELINUX
 		section .bss2		nobits valign=16 vfollows=.rbfg
 %else
 		section .bss2		nobits valign=16 vfollows=.bss
@@ -93,3 +93,4 @@ RBFG_brainfuck:	resb 2048		; Bigger than an Ethernet packet...
 		; Reserve space for stack
 		section .stack		nobits align=16 start=STACK_START
 Stack		resb	STACK_SIZE
+StackTop	equ $

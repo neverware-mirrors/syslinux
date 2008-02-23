@@ -639,7 +639,7 @@ kerneltype_table:
 		dw is_com32_image	; VK_COM32
 		dw is_config_file	; VK_CONFIG
 
-		section .bss
+		section .bss1
 		alignb 4
 ThisKbdTo	resd 1			; Temporary holder for KbdTimeout
 ThisTotalTo	resd 1			; Temporary holder for TotalTimeout

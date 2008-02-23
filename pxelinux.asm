@@ -198,7 +198,7 @@ IPOption	resb 80			; ip= option buffer
 InitStack	resd 1			; Pointer to reset stack (SS:SP)
 PXEStack	resd 1			; Saved stack during PXE call
 
-		section .bss
+		section .bss1
 		alignb 4
 RebootTime	resd 1			; Reboot timeout, if set by option
 StrucPtr	resd 1			; Pointer to PXENV+ or !PXE structure
@@ -2498,7 +2498,7 @@ old_api_unload:
 ;
 ; PXE query packets partially filled in
 ;
-		section .bss
+		section .bss1
 pxe_bootp_query_pkt:
 .status:	resw 1			; Status
 .packettype:	resw 1			; Boot server packet type

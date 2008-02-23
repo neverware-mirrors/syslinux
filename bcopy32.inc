@@ -72,12 +72,6 @@ bcopy_gdt:
 		dw 104-1, DummyTSS	; 30h 32-bit task state segment
 		dd 00008900h		; present, dpl 0, 104 bytes @DummyTSS
 
-		; 16-bit stack segment, which may have a different
-		; base from DS16 (e.g. if we're booted from PXELINUX)
-	desc SS16
-		dd 0000ffffh		; 38h Data segment, use16, read/write,
-		dd 00009300h		; present, dpl 0, cover 64K
-
 bcopy_gdt_size:	equ $-bcopy_gdt
 
 ;
@@ -88,123 +82,25 @@ bcopy_gdt_size:	equ $-bcopy_gdt
 ;	ESI	- source pointer (-1 means do bzero rather than bcopy)
 ;	EDI	- target pointer
 ;	ECX	- byte count
-;	DF	- zero
 ;
 ; Outputs:
 ;	ESI	- first byte after source (garbage if ESI == -1 on entry)
 ;	EDI	- first byte after target
 ;
+		bits 16
+
 bcopy:		pushad
-		push word pm_bcopy
-		call simple_pm_call
+		mov dx,.pm
+		call pm_call
 		popad
 		add edi,ecx
 		add esi,ecx
 		ret
 
-;
-; This routine is used to invoke a simple routine in 16-bit protected
-; mode (with 32-bit DS and ES, and working 16-bit stack.)
-; Note that all segment registers including CS, except possibly SS,
-; are zero-based in the protected-mode routine.
-;
-; No interrupt thunking services are provided; interrupts are disabled
-; for the duration of the routine.  Don't run for too long at a time.
-;
-; Inputs:
-;	On stack	- pm entrypoint
-;	EAX, EBP preserved until real-mode exit
-;	EBX, ECX, EDX, ESI and EDI passed to the called routine
-;
-; Outputs:
-;	EAX, EBP restored from real-mode entry
-;	All other registers as returned from called function
-;	PM entrypoint cleaned off stack
-;
-simple_pm_call:
-		push eax
-		push ebp
-		mov bp,sp
-		pushfd			; Saves, among others, the IF flag
-		push ds
-		push es
-		push fs
-		push gs
+		bits 32
+.pm:
+		cld
 
-		cli
-		call enable_a20
-
-		mov byte [cs:bcopy_gdt.TSS+5],89h	; Mark TSS unbusy
-
-		; Convert the stack segment to a base
-		xor eax,eax
-		mov ax,ss
-		shl eax,4
-		or eax,93000000h
-		mov [cs:bcopy_gdt.SS16+2],eax
-
-		push ss			; Save real-mode SS selector
-
-		o32 lgdt [cs:bcopy_gdt]
-		mov eax,cr0
-		or al,1
-		mov cr0,eax		; Enter protected mode
-		jmp PM_CS16:.in_pm
-.in_pm:
-		mov ax,PM_SS16		; Make stack usable
-		mov ss,ax
-
-		mov al,PM_DS16_4G	; Data segment selector
-		mov es,ax
-		mov ds,ax
-
-		; Set fs, gs, tr, and ldtr in case we're on a virtual
-		; machine running on Intel VT hardware -- it can't
-		; deal with a partial transition, for no good reason.
-
-		mov al,PM_DS16_RM	; Real-mode-like segment
-		mov fs,ax
-		mov gs,ax
-		mov al,PM_TSS		; Intel VT really doesn't want
-		ltr ax			; an invalid TR and LDTR, so give
-		xor ax,ax		; it something that it can use...
-		lldt ax			; (sigh)
-
-		call [bp+2*4+2]		; Call actual routine
-
-.exit:
-		mov ax,PM_DS16_RM	; "Real-mode-like" data segment
-		mov es,ax
-		mov ds,ax
-
-		pop bp			; Previous value for ss
-
-		mov eax,cr0
-		and al,~1
-		mov cr0,eax		; Disable protected mode
-		jmp 0:.in_rm
-
-.in_rm:		; Back in real mode
-		mov ss,bp
-		pop gs
-		pop fs
-		pop es
-		pop ds
-%if DISABLE_A20
-		call disable_a20
-%endif
-
-		popfd			; Re-enables interrupts
-		pop ebp
-		pop eax
-		ret 2			; Drops the pm entry
-
-;
-; pm_bcopy:
-;
-;	This is the protected-mode core of the "bcopy" routine.
-;
-pm_bcopy:
 		cmp esi,-1
 		je .bzero
 
@@ -237,8 +133,6 @@ pm_bcopy:
 		sub edi,3
 		mov ecx,eax
 		a32 rep movsd
-
-		cld
 		ret
 
 .bzero:
@@ -250,8 +144,178 @@ pm_bcopy:
 
 		mov cx,si		; Write fractional dword
 		a32 rep stosb
+.done:
 		ret
 
+;
+; pm_call: call low-memory subroutine in protected mode
+;	DX	= 32-bit function to call
+;	ECX, ESI, EDI preserved in and out of function
+;		All other registers and the flags saved/restored
+;
+	bits 16
+pm_call:
+	push ds
+	push es
+	push fs
+	push gs
+	push eax
+	push ebx
+	push ebp
+	pushfd
+	mov bx,.pm
+	jmp enter_pm
+
+.pm:	bits 32
+	movzx edx,dx
+	call edx
+	mov bx,.rm
+	jmp enter_rm
+
+.rm:	bits 16
+	popfd
+	pop ebp
+	pop ebx
+	pop eax
+	pop gs
+	pop fs
+	pop es
+	pop ds
+	ret
+
+;
+; enter_pm: Go to 32-bit protected mode with interrupts enabled
+;	BX	= 32-bit entry point (in low memory)
+;	EBP	= on exit, points to the RM stack as a 32-bit value
+;	ECX, EDX, ESI, EDI preserved across this routine
+;	EAX	clobbered
+;
+		bits 16
+enter_pm:
+		mov ax,ss		; If real mode ss == 0 and the high
+		or ax,[PMESP+2]		; half of PMESP is zero, shared stack
+		jnz .switch_stack
+		mov [PMESP],sp
+.switch_stack:
+		cli
+		xor eax,eax
+		mov ds,ax
+		mov ax,ss
+		mov [RealModeSSSP],sp
+		mov [RealModeSSSP+2],ax
+		movzx ebp,sp
+		shl eax,4
+		add ebp,eax		; ESI -> top of real-mode stack
+		cld
+		call enable_a20
+
+.a20ok:
+		mov byte [bcopy_gdt.TSS+5],89h	; Mark TSS unbusy
+
+		lgdt [bcopy_gdt]	; We can use the same GDT just fine
+		lidt [PM_IDT_ptr]	; Set up the IDT
+		mov eax,cr0
+		or al,1
+		mov cr0,eax		; Enter protected mode
+		jmp PM_CS32:.in_pm
+
+		bits 32
+.in_pm:
+		xor eax,eax		; Available for future use...
+		mov fs,eax
+		mov gs,eax
+		lldt ax
+
+		mov al,PM_DS32		; Set up data segments
+		mov es,eax
+		mov ds,eax
+		mov ss,eax
+
+		mov al,PM_TSS		; Be nice to Intel's VT by
+		ltr ax			; giving it a valid TR
+
+		mov esp,[PMESP]		; Load protmode %esp if available
+		sti
+		jmp bx			; Go to where we need to go
+
+;
+; enter_rm: Return to real mode from 32-bit protected mode
+;
+;	BX	= 16-bit entry point (CS = 0)
+;	ECX, EDX, ESI, EDI preserved across this routine
+;	EAX	clobbered
+;	EBP reserved
+;
+; THIS DOES NOT ENABLE INTERRUPTS - THERE ARE USERS WHICH RELY ON
+; INTERRUPTS BEING DISABLED COMING OUT OF THIS ROUTINE.
+;
+		bits 32
+enter_rm:
+		cli
+		cld
+		mov [PMESP],esp		; Save exit %esp
+		mov eax,esp
+		shr eax,16		; Upper half == 0?
+		or ax,[RealModeSSSP+2]	; If PMESP[31:16] == RMSS == 0, then
+		jnz .switchstack	; we're on a shared stack
+		mov [RealModeSSSP],sp
+.switchstack:
+		movzx esp,sp		; Make sure the high bits are zero
+		jmp PM_CS16:.in_pm16	; Return to 16-bit mode first
+
+		bits 16
+.in_pm16:
+		mov ax,PM_DS16_RM	; Real-mode-like segment
+		mov es,ax
+		mov ds,ax
+		mov ss,ax
+		mov fs,ax
+		mov gs,ax
+
+		lidt [RM_IDT_ptr]	; Real-mode IDT (rm needs no GDT)
+		mov eax,cr0
+		and al,~1
+		mov cr0,eax
+		jmp 0:.in_rm
+
+.in_rm:					; Back in real mode
+		mov ax,cs		; Set up sane segments
+		mov ds,ax
+		lss sp,[RealModeSSSP]	; Restore stack
+		mov es,ax
+		mov fs,ax
+		mov gs,ax
+		jmp bx			; Go to whereever we need to go...
+
+;
+; This is invoked on getting an interrupt in protected mode.  At
+; this point, we need to context-switch to real mode and invoke
+; the interrupt routine.
+;
+; When this gets invoked, the registers are saved on the stack and
+; AL contains the register number.
+;
+		bits 32
+pm_irq:
+		pushad
+		movzx esi,byte [esp+8*4] ; Interrupt number
+		mov bx,.rm
+		jmp enter_rm		; Go to real mode
+
+		bits 16
+.rm:
+		pushf			; Flags on stack
+		call far [cs:esi*4]	; Call IVT entry
+		mov ebx,.pm
+		jmp enter_pm		; Go back to PM
+
+		bits 32
+.pm:
+		popad
+		add esp,4		; Drop interrupt number
+		iretd
+
+		bits 16
 ;
 ; Routines to enable and disable (yuck) A20.  These routines are gathered
 ; from tips from a couple of sources, including the Linux kernel and
@@ -606,12 +670,28 @@ A20DList	dw a20d_dunno, a20d_none, a20d_bios, a20d_kbc, a20d_fast
 
 A20Type		dw A20_NONE		; A20 type
 
+
+RM_IDT_ptr:	dw 0FFFFh		; Length (nonsense, but matches CPU)
+		dd 0			; Offset
+PM_IDT_ptr:	dw 8*256-1		; Length
+		dd IDT			; Offset
+
+		; If SS == 0, this will make any 32-bit users use
+		; the shared stack, otherwise the reserved stack area
+		align 4, db 0
+PMESP		dd StackTop		; Protected-mode ESP
+
 		; Total size of .bcopy32 section
 		alignb 4, db 0		; Even number of dwords
 __bcopy_size	equ $-__bcopy_start
 
 		section .earlybss
-		alignb 2
+		alignb 8
+IDT:		resq 256
+IRQStubs:	resb 4*256+3*8
+
+RealModeSSSP	resd 1			; Real-mode SS:SP
+
 EntryPoint	resd 1			; CS:IP for shuffle_and_boot
 A20Test		resw 1			; Counter for testing status of A20
 A20Tries	resb 1			; Times until giving up on A20
@@ -631,3 +711,58 @@ TrampolineBuf	resb 83			; Shuffle and boot trampoline
 ;
 		alignb 4
 DummyTSS	resb 104
+
+;
+; This initializes the .bcopy32 sections and everything it needs.
+;
+		section .text
+bcopy_init:
+		;
+		; The .bcopy32 section proper
+		;
+		mov si,section..bcopy32.start
+		mov di,__bcopy_start
+		mov cx,__bcopy_size >> 2
+		rep movsd
+
+		;
+		; The protected-mode interrupt thunk set
+		;
+.make_idt:
+		xor edi,edi
+		mov bx,IDT
+		mov di,IRQStubs
+
+		mov eax,7aeb006ah	; push byte .. jmp short ..
+
+		mov cx,8		; 8 groups of 32 IRQs
+.gloop:
+		push cx
+		mov cx,32		; 32 entries per group
+.eloop:
+		mov [bx],di		; IDT offset [15:0]
+		mov word [bx+2],PM_CS32	; IDT segment
+		mov dword [bx+4],08e00h	; IDT offset [31:16], 32-bit interrupt
+					; gate, CPL 0 (we don't have a TSS
+					; set up...)
+		add bx,8
+
+		stosd
+		; Increment IRQ, decrement jmp short offset
+		add eax,(-4 << 24)+(1 << 8)
+
+		loop .eloop
+
+		; At the end of each group, replace the EBxx with
+		; the final E9xxxxxxxx
+		add di,3
+		mov byte [di-5],0E9h	; JMP NEAR
+		mov edx,pm_irq
+		sub edx,edi
+		mov [di-4],edx
+
+		add eax,(0x80 << 24)	; Proper offset for the next one
+		pop cx
+		loop .gloop
+
+		ret
