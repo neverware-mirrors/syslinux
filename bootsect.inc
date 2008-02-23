@@ -153,6 +153,10 @@ replace_bootstrap:
 		pop bx			; Copy from...
 		pop ax			; Copy list count
 
+		; Make extra sure we don't continue to use any stack
+		; in high memory.
+		mov dword [PMESP],StackTop
+
 		cli
 		mov cx,es
 		mov ss,cx
