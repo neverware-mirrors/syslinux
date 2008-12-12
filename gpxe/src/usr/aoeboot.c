@@ -6,9 +6,9 @@
 #include <gpxe/ata.h>
 #include <gpxe/netdevice.h>
 #include <gpxe/settings.h>
+#include <gpxe/sanboot.h>
 #include <gpxe/abft.h>
 #include <int13.h>
-#include <usr/aoeboot.h>
 
 /**
  * Guess boot network device
@@ -16,17 +16,18 @@
  * @ret netdev		Boot network device
  */
 static struct net_device * guess_boot_netdev ( void ) {
-	struct net_device *boot_netdev;
+	struct net_device *netdev;
 
 	/* Just use the first network device */
-	for_each_netdev ( boot_netdev ) {
-		return boot_netdev;
+	for_each_netdev ( netdev ) {
+		if ( netdev->state & NETDEV_OPEN )
+			return netdev;
 	}
 
 	return NULL;
 }
 
-int aoeboot ( const char *root_path ) {
+static int aoeboot ( const char *root_path ) {
 	struct ata_device ata;
 	struct int13_drive drive;
 	int rc;
@@ -71,3 +72,8 @@ int aoeboot ( const char *root_path ) {
  error_attach:
 	return rc;
 }
+
+struct sanboot_protocol aoe_sanboot_protocol __sanboot_protocol = {
+	.prefix = "aoe:",
+	.boot = aoeboot,
+};

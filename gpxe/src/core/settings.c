@@ -333,6 +333,9 @@ int fetch_setting ( struct settings *settings, struct setting *setting,
 	struct settings *child;
 	int ret;
 
+	/* Avoid returning uninitialised data on error */
+	memset ( data, 0, len );
+
 	/* NULL settings implies starting at the global settings root */
 	if ( ! settings )
 		settings = &settings_root;
@@ -417,20 +420,23 @@ int fetch_ipv4_setting ( struct settings *settings, struct setting *setting,
 int fetch_int_setting ( struct settings *settings, struct setting *setting,
 			long *value ) {
 	union {
-		long value;
 		uint8_t u8[ sizeof ( long ) ];
 		int8_t s8[ sizeof ( long ) ];
 	} buf;
 	int len;
 	int i;
 
-	buf.value = 0;
+	/* Avoid returning uninitialised data on error */
+	*value = 0;
+
+	/* Fetch raw (network-ordered, variable-length) setting */
 	len = fetch_setting ( settings, setting, &buf, sizeof ( buf ) );
 	if ( len < 0 )
 		return len;
 	if ( len > ( int ) sizeof ( buf ) )
 		return -ERANGE;
 
+	/* Convert to host-ordered signed long */
 	*value = ( ( buf.s8[0] >= 0 ) ? 0 : -1L );
 	for ( i = 0 ; i < len ; i++ ) {
 		*value = ( ( *value << 8 ) | buf.u8[i] );
@@ -452,10 +458,15 @@ int fetch_uint_setting ( struct settings *settings, struct setting *setting,
 	long svalue;
 	int len;
 
+	/* Avoid returning uninitialised data on error */
+	*value = 0;
+
+	/* Fetch as a signed long */
 	len = fetch_int_setting ( settings, setting, &svalue );
 	if ( len < 0 )
 		return len;
 
+	/* Mask off sign-extended bits */
 	*value = ( svalue & ( -1UL >> ( sizeof ( long ) - len ) ) );
 
 	return len;
@@ -469,7 +480,7 @@ int fetch_uint_setting ( struct settings *settings, struct setting *setting,
  * @ret value		Setting value, or zero
  */
 long fetch_intz_setting ( struct settings *settings, struct setting *setting ){
-	long value = 0;
+	long value;
 
 	fetch_int_setting ( settings, setting, &value );
 	return value;
@@ -484,7 +495,7 @@ long fetch_intz_setting ( struct settings *settings, struct setting *setting ){
  */
 unsigned long fetch_uintz_setting ( struct settings *settings,
 				    struct setting *setting ) {
-	unsigned long value = 0;
+	unsigned long value;
 
 	fetch_uint_setting ( settings, setting, &value );
 	return value;
@@ -655,6 +666,7 @@ static int parse_setting_name ( const char *name, struct settings **settings,
 			}
 			tmp++;
 		}
+		setting->tag |= (*settings)->tag_magic;
 	}
 
 	/* Identify setting type, if specified */

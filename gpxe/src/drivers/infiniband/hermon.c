@@ -31,6 +31,7 @@
 #include <gpxe/iobuf.h>
 #include <gpxe/netdevice.h>
 #include <gpxe/infiniband.h>
+#include <gpxe/ib_smc.h>
 #include "hermon.h"
 
 /**
@@ -610,6 +611,50 @@ static void hermon_free_mtt ( struct hermon *hermon,
 
 /***************************************************************************
  *
+ * MAD operations
+ *
+ ***************************************************************************
+ */
+
+/**
+ * Issue management datagram
+ *
+ * @v ibdev		Infiniband device
+ * @v mad		Management datagram
+ * @ret rc		Return status code
+ */
+static int hermon_mad ( struct ib_device *ibdev, union ib_mad *mad ) {
+	struct hermon *hermon = ib_get_drvdata ( ibdev );
+	union hermonprm_mad mad_ifc;
+	int rc;
+
+	linker_assert ( sizeof ( *mad ) == sizeof ( mad_ifc.mad ),
+			mad_size_mismatch );
+
+	/* Copy in request packet */
+	memcpy ( &mad_ifc.mad, mad, sizeof ( mad_ifc.mad ) );
+
+	/* Issue MAD */
+	if ( ( rc = hermon_cmd_mad_ifc ( hermon, ibdev->port,
+					 &mad_ifc ) ) != 0 ) {
+		DBGC ( hermon, "Hermon %p could not issue MAD IFC: %s\n",
+		       hermon, strerror ( rc ) );
+		return rc;
+	}
+
+	/* Copy out reply packet */
+	memcpy ( mad, &mad_ifc.mad, sizeof ( *mad ) );
+
+	if ( mad->hdr.status != 0 ) {
+		DBGC ( hermon, "Hermon %p MAD IFC status %04x\n",
+		       hermon, ntohs ( mad->hdr.status ) );
+		return -EIO;
+	}
+	return 0;
+}
+
+/***************************************************************************
+ *
  * Completion queue operations
  *
  ***************************************************************************
@@ -1015,7 +1060,7 @@ static int hermon_post_send ( struct ib_device *ibdev,
 		     ud_address_vector.pd, HERMON_GLOBAL_PD,
 		     ud_address_vector.port_number, ibdev->port );
 	MLX_FILL_2 ( &wqe->ud, 1,
-		     ud_address_vector.rlid, av->dlid,
+		     ud_address_vector.rlid, av->lid,
 		     ud_address_vector.g, av->gid_present );
 	MLX_FILL_1 ( &wqe->ud, 2,
 		     ud_address_vector.max_stat_rate,
@@ -1024,7 +1069,7 @@ static int hermon_post_send ( struct ib_device *ibdev,
 	MLX_FILL_1 ( &wqe->ud, 3, ud_address_vector.sl, av->sl );
 	gid = ( av->gid_present ? &av->gid : &hermon_no_gid );
 	memcpy ( &wqe->ud.u.dwords[4], gid, sizeof ( *gid ) );
-	MLX_FILL_1 ( &wqe->ud, 8, destination_qp, av->dest_qp );
+	MLX_FILL_1 ( &wqe->ud, 8, destination_qp, av->qpn );
 	MLX_FILL_1 ( &wqe->ud, 9, q_key, av->qkey );
 	MLX_FILL_1 ( &wqe->data[0], 0, byte_count, iob_len ( iobuf ) );
 	MLX_FILL_1 ( &wqe->data[0], 1, l_key, hermon->reserved_lkey );
@@ -1101,39 +1146,34 @@ static int hermon_post_recv ( struct ib_device *ibdev,
  * @v ibdev		Infiniband device
  * @v cq		Completion queue
  * @v cqe		Hardware completion queue entry
- * @v complete_send	Send completion handler
- * @v complete_recv	Receive completion handler
  * @ret rc		Return status code
  */
 static int hermon_complete ( struct ib_device *ibdev,
 			     struct ib_completion_queue *cq,
-			     union hermonprm_completion_entry *cqe,
-			     ib_completer_t complete_send,
-			     ib_completer_t complete_recv ) {
+			     union hermonprm_completion_entry *cqe ) {
 	struct hermon *hermon = ib_get_drvdata ( ibdev );
-	struct ib_completion completion;
 	struct ib_work_queue *wq;
 	struct ib_queue_pair *qp;
 	struct hermon_queue_pair *hermon_qp;
 	struct io_buffer *iobuf;
-	ib_completer_t complete;
+	struct ib_address_vector av;
+	struct ib_global_route_header *grh;
 	unsigned int opcode;
 	unsigned long qpn;
 	int is_send;
 	unsigned int wqe_idx;
+	size_t len;
 	int rc = 0;
 
 	/* Parse completion */
-	memset ( &completion, 0, sizeof ( completion ) );
 	qpn = MLX_GET ( &cqe->normal, qpn );
 	is_send = MLX_GET ( &cqe->normal, s_r );
 	opcode = MLX_GET ( &cqe->normal, opcode );
 	if ( opcode >= HERMON_OPCODE_RECV_ERROR ) {
 		/* "s" field is not valid for error opcodes */
 		is_send = ( opcode == HERMON_OPCODE_SEND_ERROR );
-		completion.syndrome = MLX_GET ( &cqe->error, syndrome );
-		DBGC ( hermon, "Hermon %p CQN %lx syndrome %x vendor %lx\n",
-		       hermon, cq->cqn, completion.syndrome,
+		DBGC ( hermon, "Hermon %p CQN %lx syndrome %lx vendor %lx\n",
+		       hermon, cq->cqn, MLX_GET ( &cqe->error, syndrome ),
 		       MLX_GET ( &cqe->error, vendor_error_syndrome ) );
 		rc = -EIO;
 		/* Don't return immediately; propagate error to completer */
@@ -1160,20 +1200,27 @@ static int hermon_complete ( struct ib_device *ibdev,
 	}
 	wq->iobufs[wqe_idx] = NULL;
 
-	/* Fill in length for received packets */
-	if ( ! is_send ) {
-		completion.len = MLX_GET ( &cqe->normal, byte_cnt );
-		if ( completion.len > iob_tailroom ( iobuf ) ) {
-			DBGC ( hermon, "Hermon %p CQN %lx QPN %lx IDX %x "
-			       "overlength received packet length %zd\n",
-			       hermon, cq->cqn, qpn, wqe_idx, completion.len );
-			return -EIO;
-		}
+	if ( is_send ) {
+		/* Hand off to completion handler */
+		ib_complete_send ( ibdev, qp, iobuf, rc );
+	} else {
+		/* Set received length */
+		len = MLX_GET ( &cqe->normal, byte_cnt );
+		assert ( len <= iob_tailroom ( iobuf ) );
+		iob_put ( iobuf, len );
+		assert ( iob_len ( iobuf ) >= sizeof ( *grh ) );
+		grh = iobuf->data;
+		iob_pull ( iobuf, sizeof ( *grh ) );
+		/* Construct address vector */
+		memset ( &av, 0, sizeof ( av ) );
+		av.qpn = MLX_GET ( &cqe->normal, srq_rqpn );
+		av.lid = MLX_GET ( &cqe->normal, slid_smac47_32 );
+		av.sl = MLX_GET ( &cqe->normal, sl );
+		av.gid_present = MLX_GET ( &cqe->normal, g );
+		memcpy ( &av.gid, &grh->sgid, sizeof ( av.gid ) );
+		/* Hand off to completion handler */
+		ib_complete_recv ( ibdev, qp, &av, iobuf, rc );
 	}
-
-	/* Pass off to caller's completion handler */
-	complete = ( is_send ? complete_send : complete_recv );
-	complete ( ibdev, qp, &completion, iobuf );
 
 	return rc;
 }
@@ -1183,13 +1230,9 @@ static int hermon_complete ( struct ib_device *ibdev,
  *
  * @v ibdev		Infiniband device
  * @v cq		Completion queue
- * @v complete_send	Send completion handler
- * @v complete_recv	Receive completion handler
  */
 static void hermon_poll_cq ( struct ib_device *ibdev,
-			     struct ib_completion_queue *cq,
-			     ib_completer_t complete_send,
-			     ib_completer_t complete_recv ) {
+			     struct ib_completion_queue *cq ) {
 	struct hermon *hermon = ib_get_drvdata ( ibdev );
 	struct hermon_completion_queue *hermon_cq = ib_cq_get_drvdata ( cq );
 	union hermonprm_completion_entry *cqe;
@@ -1209,8 +1252,7 @@ static void hermon_poll_cq ( struct ib_device *ibdev,
 		DBGCP_HD ( hermon, cqe, sizeof ( *cqe ) );
 
 		/* Handle completion */
-		if ( ( rc = hermon_complete ( ibdev, cq, cqe, complete_send,
-					      complete_recv ) ) != 0 ) {
+		if ( ( rc = hermon_complete ( ibdev, cq, cqe ) ) != 0 ) {
 			DBGC ( hermon, "Hermon %p failed to complete: %s\n",
 			       hermon, strerror ( rc ) );
 			DBGC_HD ( hermon, cqe, sizeof ( *cqe ) );
@@ -1380,6 +1422,9 @@ static void hermon_event_port_state_change ( struct hermon *hermon,
 		return;
 	}
 
+	/* Update MAD parameters */
+	ib_smc_update ( hermon->ibdev[port], hermon_mad );
+
 	/* Notify Infiniband core of link state change */
 	ib_link_state_changed ( hermon->ibdev[port] );
 }
@@ -1467,6 +1512,9 @@ static int hermon_open ( struct ib_device *ibdev ) {
 		       hermon, strerror ( rc ) );
 		return rc;
 	}
+
+	/* Update MAD parameters */
+	ib_smc_update ( ibdev, hermon_mad );
 
 	return 0;
 }
@@ -1582,51 +1630,6 @@ static void hermon_mcast_detach ( struct ib_device *ibdev,
 	}
 }
 
-/***************************************************************************
- *
- * MAD operations
- *
- ***************************************************************************
- */
-
-/**
- * Issue management datagram
- *
- * @v ibdev		Infiniband device
- * @v mad		Management datagram
- * @v len		Length of management datagram
- * @ret rc		Return status code
- */
-static int hermon_mad ( struct ib_device *ibdev, struct ib_mad_hdr *mad,
-			size_t len ) {
-	struct hermon *hermon = ib_get_drvdata ( ibdev );
-	union hermonprm_mad mad_ifc;
-	int rc;
-
-	/* Copy in request packet */
-	memset ( &mad_ifc, 0, sizeof ( mad_ifc ) );
-	assert ( len <= sizeof ( mad_ifc.mad ) );
-	memcpy ( &mad_ifc.mad, mad, len );
-
-	/* Issue MAD */
-	if ( ( rc = hermon_cmd_mad_ifc ( hermon, ibdev->port,
-					 &mad_ifc ) ) != 0 ) {
-		DBGC ( hermon, "Hermon %p could not issue MAD IFC: %s\n",
-		       hermon, strerror ( rc ) );
-		return rc;
-	}
-
-	/* Copy out reply packet */
-	memcpy ( mad, &mad_ifc.mad, len );
-
-	if ( mad->status != 0 ) {
-		DBGC ( hermon, "Hermon %p MAD IFC status %04x\n",
-		       hermon, ntohs ( mad->status ) );
-		return -EIO;
-	}
-	return 0;
-}
-
 /** Hermon Infiniband operations */
 static struct ib_device_operations hermon_ib_operations = {
 	.create_cq	= hermon_create_cq,
@@ -1642,7 +1645,6 @@ static struct ib_device_operations hermon_ib_operations = {
 	.close		= hermon_close,
 	.mcast_attach	= hermon_mcast_attach,
 	.mcast_detach	= hermon_mcast_detach,
-	.mad		= hermon_mad,
 };
 
 /***************************************************************************
