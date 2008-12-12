@@ -66,7 +66,7 @@
 	.align 16
 	.globl hidemem_base
 	.globl hidemem_umalloc
-	.globl hidemem_text
+	.globl hidemem_textdata
 memory_windows:
 base_memory_window:	.long 0x00000000, 0x00000000 /* Start of memory */
 
@@ -76,7 +76,7 @@ ext_memory_window:	.long 0x000a0000, 0x00000000 /* 640kB mark */
 hidemem_umalloc:	.long 0xffffffff, 0xffffffff /* Changes at runtime */
 			.long 0xffffffff, 0xffffffff /* Changes at runtime */
 
-hidemem_text:		.long 0xffffffff, 0xffffffff /* Changes at runtime */
+hidemem_textdata:	.long 0xffffffff, 0xffffffff /* Changes at runtime */
 			.long 0xffffffff, 0xffffffff /* Changes at runtime */
 
 			.long 0xffffffff, 0xffffffff /* End of memory */
@@ -268,8 +268,10 @@ get_underlying_e820:
 	pushl	%ebx
 	pushl	%ecx
 	pushl	%edx
+	pushl	%esi	/* Some implementations corrupt %esi, so we	*/
+	pushl	%edi	/* preserve %esi, %edi and %ebp to be paranoid	*/
+	pushl	%ebp
 	pushw	%es
-	pushw	%di
 	pushw	%ds
 	popw	%es
 	movw	$underlying_e820_cache, %di
@@ -280,8 +282,10 @@ get_underlying_e820:
 	stc
 	pushfw
 	lcall	*%cs:int15_vector
-	popw	%di
 	popw	%es
+	popl	%ebp
+	popl	%edi
+	popl	%esi
 	/* Check for error return from underlying e820 call */
 	jc	2f /* CF set: error */
 	cmpl	$SMAP, %eax

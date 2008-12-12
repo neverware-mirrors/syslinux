@@ -23,7 +23,7 @@ struct device;
 #define MAX_LL_ADDR_LEN 20
 
 /** Maximum length of a link-layer header */
-#define MAX_LL_HEADER_LEN 32
+#define MAX_LL_HEADER_LEN 6
 
 /** Maximum length of a network-layer address */
 #define MAX_NET_ADDR_LEN 4
@@ -79,34 +79,24 @@ struct ll_protocol {
 	 * Add link-layer header
 	 *
 	 * @v iobuf		I/O buffer
-	 * @v netdev		Network device
-	 * @v net_protocol	Network-layer protocol
 	 * @v ll_dest		Link-layer destination address
+	 * @v ll_source		Source link-layer address
+	 * @v net_proto		Network-layer protocol, in network-byte order
 	 * @ret rc		Return status code
-	 *
-	 * This method should prepend in the link-layer header
-	 * (e.g. the Ethernet DIX header).
 	 */
-	int ( * push ) ( struct io_buffer *iobuf, struct net_device *netdev,
-			 struct net_protocol *net_protocol,
-			 const void *ll_dest );
+	int ( * push ) ( struct io_buffer *iobuf, const void *ll_dest,
+			 const void *ll_source, uint16_t net_proto );
 	/**
 	 * Remove link-layer header
 	 *
-	 * @v iobuf	I/O buffer
-	 * @v netdev	Network device
-	 * @v net_proto	Network-layer protocol, in network-byte order
-	 * @v ll_source	Source link-layer address
-	 * @ret rc	Return status code
-	 *
-	 * This method should strip off the link-layer header
-	 * (e.g. the Ethernet DIX header) and return the protocol and
-	 * source link-layer address.  The method must not alter the
-	 * packet content, and may return the link-layer address as a
-	 * pointer to data within the packet.
+	 * @v iobuf		I/O buffer
+	 * @ret ll_dest		Link-layer destination address
+	 * @ret ll_source	Source link-layer address
+	 * @ret net_proto	Network-layer protocol, in network-byte order
+	 * @ret rc		Return status code
 	 */
-	int ( * pull ) ( struct io_buffer *iobuf, struct net_device *netdev,
-			 uint16_t *net_proto, const void **ll_source );
+	int ( * pull ) ( struct io_buffer *iobuf, const void **ll_dest,
+			 const void **ll_source, uint16_t *net_proto );
 	/**
 	 * Transcribe link-layer address
 	 *
@@ -120,6 +110,16 @@ struct ll_protocol {
 	 * allocated.
 	 */
 	const char * ( * ntoa ) ( const void * ll_addr );
+	/**
+	 * Hash multicast address
+	 *
+	 * @v af	Address family
+	 * @v net_addr	Network-layer address
+	 * @v ll_addr	Link-layer address to fill in
+	 * @ret rc	Return status code
+	 */
+	int ( * mc_hash ) ( unsigned int af, const void *net_addr,
+			    void *ll_addr );
 	/** Link-layer protocol
 	 *
 	 * This is an ARPHRD_XXX constant, in network byte order.
@@ -193,16 +193,25 @@ struct net_device_operations {
 	void ( * irq ) ( struct net_device *netdev, int enable );
 };
 
+/** Network device error */
+struct net_device_error {
+	/** Error status code */
+	int rc;
+	/** Error count */
+	unsigned int count;
+};
+
+/** Maximum number of unique errors that we will keep track of */
+#define NETDEV_MAX_UNIQUE_ERRORS 4
+
 /** Network device statistics */
 struct net_device_stats {
-	/** Count of successfully completed transmissions */
-	unsigned int tx_ok;
-	/** Count of transmission errors */
-	unsigned int tx_err;
-	/** Count of successfully received packets */
-	unsigned int rx_ok;
-	/** Count of reception errors */
-	unsigned int rx_err;
+	/** Count of successful completions */
+	unsigned int good;
+	/** Count of error completions */
+	unsigned int bad;
+	/** Error breakdowns */
+	struct net_device_error errors[NETDEV_MAX_UNIQUE_ERRORS];
 };
 
 /**
@@ -241,12 +250,19 @@ struct net_device {
 	 * This is the bitwise-OR of zero or more NETDEV_XXX constants.
 	 */
 	unsigned int state;
+	/** Maximum packet length
+	 *
+	 * This length includes any link-layer headers.
+	 */
+	size_t max_pkt_len;
 	/** TX packet queue */
 	struct list_head tx_queue;
 	/** RX packet queue */
 	struct list_head rx_queue;
-	/** Device statistics */
-	struct net_device_stats stats;
+	/** TX statistics */
+	struct net_device_stats tx_stats;
+	/** RX statistics */
+	struct net_device_stats rx_stats;
 
 	/** Configuration settings applicable to this device */
 	struct simple_settings settings;

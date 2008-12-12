@@ -2,7 +2,7 @@
 #define	PXENV_UNDI_GET_NIC_TYPE		0x0012
 #define	PXENV_STOP_UNDI			0x0015
 #define PXENV_UNLOAD_STACK		0x0070
-	
+
 	.text
 	.arch i386
 	.org 0
@@ -12,36 +12,39 @@
 
 #include <undi.h>
 
+#define STACK_MAGIC ( 'L' + ( 'R' << 8 ) + ( 'E' << 16 ) + ( 'T' << 24 ) )
+
 /*****************************************************************************
  * Entry point:	set operating context, print welcome message
  *****************************************************************************
  */
 	.section ".prefix"
-	/* Set up our non-stack segment registers */
 	jmp	$0x7c0, $1f
-1:	pushfl
-	/* %ax here is the default return type... */
-	movw	$5, %ax			/* Keep PXE+UNDI */
+1:
+	/* Preserve registers for possible return to PXE */
+	pushfl
 	pushal
-	pushw	%ds
-	pushw	%es
-	pushw	%fs
 	pushw	%gs
+	pushw	%fs
+	pushw	%es
+	pushw	%ds
+
+	/* Store magic word on PXE stack and remember PXE %ss:esp */
+	pushl	$STACK_MAGIC
+	movw	%ss, %cs:pxe_ss
+	movl	%esp, %cs:pxe_esp
+
+	/* Set up our non-stack segment registers */
 	movw	%cs, %ax
 	movw	%ax, %ds
-	
 	movw	$0x40, %ax		/* BIOS data segment access */
 	movw	%ax, %fs
-
-	pushw	%fs:0x13
 	/* Record PXENV+ and !PXE nominal addresses */
-	movw	%es, pxenv_segment
+	movw	%es, %ax		/* PXENV+ address */
+	movw	%ax, pxenv_segment
 	movw	%bx, pxenv_offset
-	movw	%sp, %bp
-	movw	%ss, return_stack_segment
-	movl	%esp, return_stack_offset
-	movl	50(%bp), %eax
-	movl	%eax, ppxe_segoff	/* !PXE address */
+	popl	%eax			/* Discard return address */
+	popl	ppxe_segoff		/* !PXE address */
 	/* Set up stack just below 0x7c00 */
 	xorw	%ax, %ax
 	movw	%ax, %ss
@@ -60,7 +63,7 @@
  * Verify PXENV+ structure and record parameters of interest
  *****************************************************************************
  */
-detect_pxenv:
+ect_pxenv:
 	/* Signature check */
 	les	pxenv_segoff, %bx
 	cmpl	$0x4e455850, %es:(%bx)	/* 'PXEN' signature */
@@ -264,7 +267,7 @@ no_physical_device:
  * Leave NIC in a safe state
  *****************************************************************************
  */
-#ifndef PXELOADER_KEEP_UNDI
+#ifndef PXELOADER_KEEP_PXE
 shutdown_nic:
 	/* Issue PXENV_UNDI_SHUTDOWN */
 	movw	$PXENV_UNDI_SHUTDOWN, %bx
@@ -272,11 +275,6 @@ shutdown_nic:
 	jnc	1f
 	call	print_pxe_error
 1:
-
-/*****************************************************************************
- * Unload PXE base code
- *****************************************************************************
- */
 unload_base_code:
 	/* Issue PXENV_UNLOAD_STACK */
 	movw	$PXENV_UNLOAD_STACK, %bx
@@ -289,12 +287,14 @@ unload_base_code:
 	movw	%fs:(0x13), %bx
 	call	free_basemem
 99:
+	andw	$~( UNDI_FL_INITIALIZED | UNDI_FL_KEEP_ALL ), flags
+#endif /* PXELOADER_KEEP_PXE */
 
 /*****************************************************************************
  * Unload UNDI driver
  *****************************************************************************
  */
-
+#ifndef PXELOADER_KEEP_UNDI
 unload_undi:
 	/* Issue PXENV_STOP_UNDI */
 	movw	$PXENV_STOP_UNDI, %bx
@@ -309,6 +309,7 @@ unload_undi:
 	/* Clear UNDI_FL_STARTED */
 	andw	$~UNDI_FL_STARTED, flags
 99:	
+#endif /* PXELOADER_KEEP_UNDI */
 
 /*****************************************************************************
  * Print remaining free base memory
@@ -325,15 +326,14 @@ print_free_basemem:
 10:	.asciz	"         "
 20:	.asciz	"kB free base memory after PXE unload\n"
 	.previous
-#endif /* PXELOADER_KEEP_UNDI */
 	
 /*****************************************************************************
  * Exit point
  *****************************************************************************
  */	
 finished:
-	jmp	run_etherboot
-	
+	jmp	run_gpxe
+
 /*****************************************************************************
  * Subroutine: print segment:offset address
  *
@@ -527,6 +527,10 @@ print_pxe_error:
  * PXE data structures
  *****************************************************************************
  */
+	.section ".prefix.data"
+
+pxe_ss:			.word 0
+pxe_esp:		.long 0
 
 pxe_parameter_structure: .fill 20
 
@@ -554,12 +558,6 @@ entry_segoff:
 entry_offset:		.word 0
 entry_segment:		.word 0
 
-return_stack_segoff:
-return_stack_offset:	.long 0
-return_stack_segment:	.word 0
-
-return_type:		.word 0		/* Default: unload PXE and boot next */
-
 undi_fbms_start:	.word 0
 undi_fbms_end:		.word 0
 
@@ -569,16 +567,18 @@ isapnp_read_port:	.word UNDI_NO_ISAPNP_READ_PORT
 
 pci_vendor:		.word 0
 pci_device:		.word 0
-flags:			.word UNDI_FL_STARTED
+flags:
+	.word ( UNDI_FL_INITIALIZED | UNDI_FL_STARTED | UNDI_FL_KEEP_ALL )
 
 	.equ undi_device_size, ( . - undi_device )
 
 /*****************************************************************************
- * Run Etherboot main code
+ * Run gPXE main code
  *****************************************************************************
- */	
-run_etherboot:
-	/* Install Etherboot */
+ */
+	.section ".prefix"
+run_gpxe:
+	/* Install gPXE */
 	call	install
 
 	/* Set up real-mode stack */
@@ -594,6 +594,10 @@ run_etherboot:
 	rep movsb
 #endif
 
+	/* Retrieve PXE %ss:esp */
+	movw	pxe_ss,	%di
+	movl	pxe_esp, %ebp
+
 	/* Jump to .text16 segment with %ds pointing to .data16 */
 	movw	%bx, %ds
 	pushw	%ax
@@ -605,29 +609,30 @@ run_etherboot:
 	pushl	$main
 	pushw	%cs
 	call	prot_call
-	popl	%eax /* discard */
+	popl	%ecx /* discard */
 
-#ifdef PXELOADER_KEEP_UNDI
-	/* Boot next device */
-	movw	$0x40, %ax
-	movw	%ax, %fs
-	movw	$preloaded_undi,%bx
-	
-	cli
-	movw	%ss:return_type-undi_device(%bx),%ax
-	lssl	%ss:return_stack_segoff-undi_device(%bx), %esp
-	movw	%sp,%bp
-	movw	%ax,38(%bp)	/* Overwrite return AX value */
-	popw	%fs:0x13	/* 0 */
-	popw	%gs		/* 2 */
-	popw	%fs		/* 4 */
-	popw	%es		/* 6 */
-	popw	%ds		/* 8 */
-	popal			/* 10, 14, 18, 22, 26, 30, 34, 38 */
-	popfl			/* 42 */
-	lret			/* 46 */
-#else
+	/* Uninstall gPXE */
+	call	uninstall
+
+	/* Restore PXE stack */
+	movw	%di, %ss
+	movl	%ebp, %esp
+
+	/* Check PXE stack magic */
+	popl	%eax
+	cmpl	$STACK_MAGIC, %eax
+	jne	1f
+
+	/* PXE stack OK: return to caller */
+	popw	%ds
+	popw	%es
+	popw	%fs
+	popw	%gs
+	popal
+	popfl
+	xorw	%ax, %ax	/* Return success */
+	lret
+
+1:	/* PXE stack corrupt or removed: use INT 18 */
 	int	$0x18
-#endif
-
 	.previous

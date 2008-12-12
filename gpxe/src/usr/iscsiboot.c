@@ -9,9 +9,9 @@
 #include <gpxe/netdevice.h>
 #include <gpxe/ibft.h>
 #include <gpxe/init.h>
+#include <gpxe/sanboot.h>
 #include <int13.h>
 #include <usr/autoboot.h>
-#include <usr/iscsiboot.h>
 
 struct setting keep_san_setting __setting = {
 	.name = "keep-san",
@@ -26,17 +26,18 @@ struct setting keep_san_setting __setting = {
  * @ret netdev		Boot network device
  */
 static struct net_device * guess_boot_netdev ( void ) {
-	struct net_device *boot_netdev;
+	struct net_device *netdev;
 
 	/* Just use the first network device */
-	for_each_netdev ( boot_netdev ) {
-		return boot_netdev;
+	for_each_netdev ( netdev ) {
+		if ( netdev->state & NETDEV_OPEN )
+			return netdev;
 	}
 
 	return NULL;
 }
 
-int iscsiboot ( const char *root_path ) {
+static int iscsiboot ( const char *root_path ) {
 	struct scsi_device *scsi;
 	struct int13_drive *drive;
 	int keep_san;
@@ -100,3 +101,8 @@ int iscsiboot ( const char *root_path ) {
  err_alloc_scsi:
 	return rc;
 }
+
+struct sanboot_protocol iscsi_sanboot_protocol __sanboot_protocol = {
+	.prefix = "iscsi:",
+	.boot = iscsiboot,
+};
