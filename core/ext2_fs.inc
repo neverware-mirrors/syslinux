@@ -1,12 +1,12 @@
 ; -----------------------------------------------------------------------
-;
-;   Copyright 1998-2008 H. Peter Anvin - All Rights Reserved
+;   
+;   Copyright 1998-2009 H. Peter Anvin - All Rights Reserved
 ;
 ;   This program is free software; you can redistribute it and/or modify
 ;   it under the terms of the GNU General Public License as published by
-;   the Free Software Foundation, Inc., 675 Mass Ave, Cambridge MA 02139,
-;   USA; either version 2 of the License, or (at your option) any later
-;   version; incorporated herein by reference.
+;   the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+;   Boston MA 02110-1301, USA; either version 2 of the License, or
+;   (at your option) any later version; incorporated herein by reference.
 ;
 ; -----------------------------------------------------------------------
 
@@ -36,6 +36,10 @@
 %define EXT3_FEATURE_INCOMPAT_RECOVER		0x0004
 %define EXT3_FEATURE_INCOMPAT_JOURNAL_DEV	0x0008
 %define EXT2_FEATURE_INCOMPAT_META_BG		0x0010
+%define EXT4_FEATURE_INCOMPAT_EXTENTS           0x0040
+%define EXT4_FEATURE_INCOMPAT_64BIT             0x0080
+%define EXT4_FEATURE_INCOMPAT_MMP               0x0100
+%define EXT4_FEATURE_INCOMPAT_FLEX_BG           0x0200
 %define EXT2_FEATURE_INCOMPAT_ANY		0xffffffff
 
 %define EXT2_NDIR_BLOCKS	12
@@ -172,7 +176,7 @@ bg_reserved		resd 3
 %define ext2_group_desc_lg2size 5
 
 ;
-; Structure definition for ext2 directory entry
+; Structure definition for an ext2 directory entry
 ;
 			struc ext2_dir_entry
 d_inode			resd 1			; Inode number
@@ -181,3 +185,43 @@ d_name_len		resb 1			; Name length
 d_file_type		resb 1			; File type
 d_name			equ $
 			endstruc
+
+;
+; Structure definition for an ext4 extent structure
+;
+
+			struc ext4_extent
+ee_block		resd 1			; First logical block
+ee_len			resw 1			; Number of blocks in extent
+ee_start_hi		resw 1			; High 16 bits of physical block
+ee_start_lo		resd 1			; Low 32 bits of physical block
+			endstruc
+
+			struc ext4_extend_hdr
+eh_magic		resw 1			; Format magic
+eh_entries		resw 1			; Number of valid entries
+eh_max			resw 1			; Capacity of store in entries
+eh_depth		resw 1			; Tree has underlying blocks
+eh_generation		resd 1			; Generation of tree
+			endstruc
+
+%define EXT4_EXT_MAGIC	0xf30a
+
+;
+; ext4 inode flags
+;
+%define EXT4_INDEX_FL		0x00001000 ; hash-indexed directory
+%define EXT4_IMAGIC_FL          0x00002000 ; AFS directory
+%define EXT4_JOURNAL_DATA_FL    0x00004000 ; file data should be journaled
+%define EXT4_NOTAIL_FL          0x00008000 ; file tail should not be merged
+%define EXT4_DIRSYNC_FL         0x00010000 ; dirsync behaviour (directories only)
+%define EXT4_TOPDIR_FL          0x00020000 ; Top of directory hierarchies
+%define EXT4_HUGE_FILE_FL       0x00040000 ; Set to each huge file
+%define EXT4_EXTENTS_FL         0x00080000 ; Inode uses extents
+%define EXT4_EXT_MIGRATE        0x00100000 ; Inode is migrating
+%define EXT4_RESERVED_FL        0x80000000 ; reserved for ext4 lib
+
+%define EXT4_STATE_JDATA        0x00000001 ; journaled data exists
+%define EXT4_STATE_NEW          0x00000002 ; inode is newly created
+%define EXT4_STATE_XATTR        0x00000004 ; has in-inode xattrs
+%define EXT4_STATE_NO_EXPAND	0x00000008 ; No space for expansion
