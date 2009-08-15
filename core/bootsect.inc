@@ -61,7 +61,7 @@ load_bootsec:
 
 		xor edx,edx
 		xor esi,esi
-%if IS_SYSLINUX || IS_EXTLINUX
+%if IS_HD_BASED
 		; Restore original FDC table
 		mov eax,[OrigFDCTabPtr]
 		mov [fdctab],eax

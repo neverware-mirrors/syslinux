@@ -94,6 +94,7 @@ syslinux_id	equ 031h		; 3 = SYSLINUX family; 1 = SYSLINUX
 pxelinux_id	equ 032h		; 3 = SYSLINUX family; 2 = PXELINUX
 isolinux_id	equ 033h		; 3 = SYSLINUX family; 3 = ISOLINUX
 extlinux_id	equ 034h		; 3 = SYSLINUX family; 4 = EXTLINUX
+btrlinux_id	equ 035h		; 3 = SYSLINUX family; 5 = BTRLINUX
 
 ;
 ; Types of vkernels

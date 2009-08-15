@@ -67,7 +67,7 @@ adv_init:
 		cmp byte [ADVDrive],-1
 		jne adv_read
 
-%if IS_SYSLINUX || IS_EXTLINUX
+%if IS_HD_BASED
 		cmp word [ADVSectors],2		; Not present?
 		jb adv_verify
 
@@ -430,7 +430,7 @@ adv_read_write:
 
 .noparm:
 		; No CHS info... this better be our boot drive, then
-%if IS_SYSLINUX || IS_EXTLINUX
+%if IS_HD_BASED
 		cmp dl,[DriveNumber]
 		jne .cb_overflow		; Fatal error!
 		movzx esi,word [bsSecPerTrack]

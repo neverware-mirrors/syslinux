@@ -591,7 +591,7 @@ comapi_derinfo:
 		mov P_DL,al
 		mov P_FS,cs
 		mov P_SI,OrigESDI
-%if IS_SYSLINUX || IS_EXTLINUX
+%if IS_HD_BASED
 		mov P_ES,cs
 		mov P_BX,PartInfo
 %elif IS_ISOLINUX
@@ -637,7 +637,7 @@ comapi_cleanup:
 		sub bp,sp		; unload_pxe may move the stack around
 		call unload_pxe
 		add bp,sp		; restore frame pointer...
-%elif IS_SYSLINUX || IS_EXTLINUX
+%elif IS_HD_BASED
 		; Restore original FDC table
 		mov eax,[OrigFDCTabPtr]
 		mov [fdctab],eax
@@ -831,7 +831,7 @@ comapi_userfont:
 ;
 ; INT 22h AX=0019h  Read disk
 ;
-%if IS_SYSLINUX || IS_ISOLINUX || IS_EXTLINUX
+%if IS_DISK_BASED
 comapi_readdisk:
 		mov esi,P_ESI		; Enforce ESI == EDI == 0, these
 		or esi,P_EDI		; are reserved for future expansion

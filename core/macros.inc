@@ -44,6 +44,25 @@
 %else
  %define IS_EXTLINUX 0
 %endif
+%ifdef IS_BTRLINUX
+ %define MY_NAME 'BTRLINUX'
+%else
+ %define IS_BTRLINUX 0
+%endif
+
+;
+; Common attributes
+;
+%if IS_PXELINUX
+ %define IS_HD_BASED 0
+ %define IS_DISK_BASED 0
+%elif IS_ISOLINUX
+ %define IS_HD_BASED 0
+ %define IS_DISK_BASED 1
+%else
+ %define IS_HD_BASED 1
+ %define IS_DISK_BASED 1
+%endif
 
 ;
 ; Macros similar to res[bwd], but which works in the code segment (after

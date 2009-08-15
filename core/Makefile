@@ -32,7 +32,7 @@ INCLUDES = -I./include -I$(com32)/include
 CODEPAGE = cp865
 
 # The targets to build in this directory...
-BTARGET  = kwdhash.gen \
+BTARGET  = kwdhash.gen btrlinux.bin \
 	   extlinux.bin extlinux.bss extlinux.sys \
 	   ldlinux.bss ldlinux.sys ldlinux.bin \
 	   isolinux.bin isolinux-debug.bin pxelinux.0
