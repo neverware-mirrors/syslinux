@@ -24,7 +24,7 @@ void __thread_process_timeouts(void)
     for (tp = curr->list.next; tp != &curr->list; tp = tp->next) {
 	t = container_of(tp, struct thread, list);
 	if ((block = t->blocked) && (timeout = block->timeout)) {
-	    if ((signed int)(timeout - now) <= 0) {
+	    if ((sjiffies_t)(timeout - now) <= 0) {
 		struct semaphore *sem = block->semaphore;
 		/* Remove us from the queue and increase the count */
 		block->list.next->prev = block->list.prev;
