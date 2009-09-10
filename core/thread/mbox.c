@@ -38,9 +38,12 @@ int mbox_post(struct mailbox *mbox, void *msg, jiffies_t timeout)
 
 jiffies_t mbox_fetch(struct mailbox *mbox, void **msg, jiffies_t timeout)
 {
-    if (sem_down(&mbox->cons_sem, timeout) == (jiffies_t)-1)
+    jiffies_t t;
+
+    t = sem_down(&mbox->cons_sem, timeout);
+    if (t == (jiffies_t)-1)
 	return -1;
-    sem_down(&mbox->tail_sem, 0);
+    t += sem_down(&mbox->tail_sem, 0);
 
     if (msg)
 	*msg = *mbox->tail;
@@ -50,4 +53,5 @@ jiffies_t mbox_fetch(struct mailbox *mbox, void **msg, jiffies_t timeout)
 
     sem_up(&mbox->tail_sem);
     sem_up(&mbox->prod_sem);
+    return t;
 }
