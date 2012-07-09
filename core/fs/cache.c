@@ -40,7 +40,6 @@ void cache_init(struct device *dev, int block_size_shift)
     cache = dev->cache_head + 1; /* First cache descriptor */
 
     head->prev  = &cache[dev->cache_entries-1];
-    head->next->prev = dev->cache_head;
     head->block = -1;
     head->data  = NULL;
 
