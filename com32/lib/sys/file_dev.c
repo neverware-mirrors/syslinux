@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------- *
  *
- *   Copyright 2004-2008 H. Peter Anvin - All Rights Reserved
+ *   Copyright 2003-2008 H. Peter Anvin - All Rights Reserved
  *
  *   Permission is hereby granted, free of charge, to any person
  *   obtaining a copy of this software and associated documentation
@@ -26,21 +26,10 @@
  * ----------------------------------------------------------------------- */
 
 /*
- * fileclose.c
- *
- * Close an ordinary file
+ * Operations structure for an ordinary file (after open)
  */
 
-#include <errno.h>
-#include <com32.h>
-#include <string.h>
+#include <fcntl.h>
 #include <fs.h>
 #include "file.h"
 
-int __file_close(struct file_info *fp)
-{
-    if (fp->i.fd.handle)
-	close_file(fp->i.fd.handle);
-
-    return 0;
-}

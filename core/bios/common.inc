@@ -4,6 +4,7 @@
 ; some derivatives.)
 ;
 
+%include "banner.inc"		; Copyright/version information
 %include "pm.inc"		; Protected mode
 %include "bcopy32.inc"		; 32-bit bcopy
 %include "strcpy.inc"           ; strcpy()

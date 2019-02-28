@@ -71,7 +71,6 @@ MAKEDIR = $(topdir)/mk
 export MAKEDIR topdir OBJDIR
 
 include $(MAKEDIR)/syslinux.mk
--include $(OBJDIR)/version.mk
 
 private-targets = prerel unprerel official release burn isolinux.iso \
 		  preupload upload test unittest regression spotless
@@ -139,17 +138,17 @@ include $(MAKEDIR)/syslinux.mk
 ifeq ($(FWCLASS),BIOS)
 MODULES = memdisk/memdisk \
 	com32/menu/*.c32 com32/modules/*.c32 com32/mboot/*.c32 \
-	com32/hdt/*.c32 com32/rosh/*.c32 com32/gfxboot/*.c32 \
+	com32/hdt/*.c32 com32/rosh/*.c32 \
 	com32/sysdump/*.c32 com32/lua/src/*.c32 com32/chain/*.c32 \
 	com32/lib/*.c32 com32/libutil/*.c32 com32/gpllib/*.c32 \
-	com32/elflink/ldlinux/*.c32 com32/cmenu/libmenu/*.c32
+	com32/cmenu/libmenu/*.c32 ldlinux/$(LDLINUX)
 else
 # FIXME: Prune other BIOS-centric modules
 MODULES = com32/menu/*.c32 com32/modules/*.c32 com32/mboot/*.c32 \
-	com32/hdt/*.c32 com32/rosh/*.c32 com32/gfxboot/*.c32 \
+	com32/hdt/*.c32 com32/rosh/*.c32 \
 	com32/sysdump/*.c32 com32/lua/src/*.c32 com32/chain/*.c32 \
 	com32/lib/*.c32 com32/libutil/*.c32 com32/gpllib/*.c32 \
-	com32/cmenu/libmenu/*.c32 com32/elflink/ldlinux/$(LDLINUX)
+	com32/cmenu/libmenu/*.c32 ldlinux/$(LDLINUX)
 endif
 
 export FIRMWARE FWCLASS ARCH BITS
@@ -157,10 +156,9 @@ export FIRMWARE FWCLASS ARCH BITS
 # List of module objects that should be installed for all derivatives
 INSTALLABLE_MODULES = $(MODULES)
 
-# syslinux.exe is BTARGET so as to not require everyone to have the
+# syslinux.exe is BOBJECT so as to not require everyone to have the
 # mingw suite installed
-BTARGET  = version.gen version.h $(OBJDIR)/version.mk
-BOBJECTS = $(BTARGET) \
+BOBJECTS = \
 	mbr/*.bin \
 	core/pxelinux.0 core/lpxelinux.0 \
 	core/isolinux.bin core/isolinux-debug.bin \
@@ -178,7 +176,7 @@ BOBJECTS = $(BTARGET) \
 
 ifeq ($(FWCLASS),EFI)
 
-BSUBDIRS = codepage com32 lzo core mbr sample efi txt
+BSUBDIRS = codepage lzo core ldlinux com32 mbr sample efi txt
 ISUBDIRS =
 
 INSTALLSUBDIRS = efi
@@ -187,12 +185,10 @@ NETINSTALLABLE = efi/syslinux.efi $(INSTALLABLE_MODULES)
 
 else
 
-BSUBDIRS = codepage com32 lzo core memdisk mbr sample \
+BSUBDIRS = codepage lzo core ldlinux com32 memdisk mbr sample \
 	   diag libinstaller dos win32 win64 dosutil txt
 
-ITARGET  =
-IOBJECTS = $(ITARGET) \
-	utils/gethostip utils/isohybrid utils/mkdiskimage \
+IOBJECTS = utils/gethostip utils/isohybrid utils/mkdiskimage \
 	mtools/syslinux linux/syslinux extlinux/extlinux
 ISUBDIRS = libinstaller mtools linux extlinux utils
 
@@ -278,10 +274,16 @@ efi64:
 else # FIRMWARE
 
 all: all-local subdirs
-
-all-local: $(BTARGET) $(ITARGET)
 	-ls -l $(BOBJECTS) $(IOBJECTS)
+
+all-local:
+
 subdirs: $(BSUBDIRS) $(ISUBDIRS)
+
+libcore:
+	@mkdir -p com32
+	$(MAKE) -C com32 PRECORE=1 SRC="$(SRC)/com32" OBJ="$(OBJ)/com32" \
+		-f $(SRC)/com32/Makefile $(MAKECMDGOALS)
 
 $(sort $(ISUBDIRS) $(BSUBDIRS)):
 	@mkdir -p $@
@@ -303,7 +305,8 @@ $(BINFILES):
 dos extlinux linux mtools win32 win64: libinstaller
 libinstaller: core
 utils: mbr
-core: com32
+core: versions libcore
+com32: core
 efi: core
 
 installer: installer-local
@@ -322,10 +325,14 @@ strip: strip-local
 
 strip-local:
 
-version.gen: $(topdir)/version $(topdir)/version.pl
+versions: version.gen version.h version.mk
+
+version.gen: version version.pl
 	$(PERL) $(topdir)/version.pl $< $@ '%define < @'
-version.h: $(topdir)/version $(topdir)/version.pl
+version.h: version version.pl
 	$(PERL) $(topdir)/version.pl $< $@ '#define < @'
+version.mk: version version.pl
+	$(PERL) $(topdir)/version.pl $< $@ '< := @'
 
 local-install: installer
 	mkdir -m 755 -p $(INSTALLROOT)$(BINDIR)
@@ -407,11 +414,6 @@ local-spotless:
 		-type f -print0 \
 	| xargs -0rt rm -f
 
-spotless: local-spotless
+spotless:
 	rm -rf $(all_firmware)
-
-#
-# Common rules that are needed by every invocation of make.
-#
-$(OBJDIR)/version.mk: $(topdir)/version $(topdir)/version.pl
-	$(PERL) $(topdir)/version.pl $< $@ '< := @'
+	$(MAKE) local-spotless

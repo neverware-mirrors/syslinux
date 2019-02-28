@@ -187,10 +187,7 @@ For best results, use a TFTP server which supports the "tsize" TFTP
 option (RFC 1784/RFC 2349).  The "tftp-hpa" TFTP server, which support
 options, is available at:
 
-	http://www.kernel.org/pub/software/network/tftp/
-	ftp://www.kernel.org/pub/software/network/tftp/
-
-and on any kernel.org mirror (see http://www.kernel.org/mirrors/).
+	https://www.kernel.org/pub/software/network/tftp/
 
 Another TFTP server which supports this is atftp by Jean-Pierre
 Lefebvre:

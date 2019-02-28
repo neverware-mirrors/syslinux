@@ -8,16 +8,17 @@
 #include <sys/elfcommon.h>
 
 /* ELF standard typedefs (yet more proof that <stdint.h> was way overdue) */
-typedef uint16_t Elf32_Half;
-typedef int16_t Elf32_SHalf;
-typedef uint32_t Elf32_Word;
-typedef int32_t Elf32_Sword;
-typedef uint64_t Elf32_Xword;
-typedef int64_t Elf32_Sxword;
+typedef Elf_Half   Elf32_Half;
+typedef Elf_SHalf  Elf32_SHalf;
+typedef Elf_Word   Elf32_Word;
+typedef Elf_Sword  Elf32_Sword;
+typedef Elf_Xword  Elf32_Xword;
+typedef Elf_Sxword Elf32_Sxword;
 
-typedef uint32_t Elf32_Off;
-typedef uint32_t Elf32_Addr;
-typedef uint16_t Elf32_Section;
+typedef Elf_Word   Elf32_Off;
+typedef Elf_Word   Elf32_Addr;
+typedef Elf_Half   Elf32_Section;
+typedef Elf_Word   Elf32_Bword;
 
 /* Dynamic header */
 

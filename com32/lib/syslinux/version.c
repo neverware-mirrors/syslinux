@@ -28,13 +28,12 @@
 #include <syslinux/config.h>
 #include <klibc/compiler.h>
 #include <core.h>
-#include <version.h>
 
 struct syslinux_version __syslinux_version;
 
 void __constructor __syslinux_get_version(void)
 {
-    __syslinux_version.version = (VERSION_MAJOR << 8) + VERSION_MINOR;
+    __syslinux_version.version = syslinux_version;
 
     /* We no longer support the COMBOOT API  */
     __syslinux_version.max_api = 0xffff;

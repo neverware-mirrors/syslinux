@@ -1,5 +1,6 @@
 	.globl	sem_down
 	.type	sem_down, @function
+	.hidden	sem_down
 sem_down:
 	decl	(%eax)
 	js	__sem_down_slow
@@ -9,6 +10,7 @@ sem_down:
 
 	.globl	sem_up
 	.type	sem_up, @function
+	.hidden	sem_up
 sem_up:
 	incl	(%eax)
 	jle	__sem_up_slow

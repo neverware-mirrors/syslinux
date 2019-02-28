@@ -39,12 +39,8 @@ TESTFILES =
 
 all: $(MODULES) $(TESTFILES)
 
-.PRECIOUS: %.o
-dmitest.o: dmitest.c
-	$(CC) $(CFLAGS) $(GPLINCLUDE) -c -o $@ $<
-
-dmitest.elf : dmi_utils.o dmitest.o $(C_LIBS)
-	$(LD) $(LDFLAGS) -o $@ $^
+OBJS_dmitest = dmi_utils.o
+dmi_utils.elf: $(OBJS_dmitest)
 
 tidy dist:
 	rm -f *.o *.lo *.a *.lst *.elf .*.d *.tmp

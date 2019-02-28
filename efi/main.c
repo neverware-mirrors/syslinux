@@ -483,7 +483,7 @@ struct boot_params {
 #define BOOT_PARAM_BLKSIZE	EFI_SIZE_TO_PAGES(sizeof(struct boot_params)) * EFI_PAGE_SIZE
 
 /* Routines in support of efi boot loader were obtained from
- * http://git.kernel.org/?p=boot/efilinux/efilinux.git:
+ * https://git.kernel.org/?p=boot/efilinux/efilinux.git:
  * kernel_jump(), handover_jump(),
  * emalloc()/efree, alloc_pages/free_pages
  * allocate_pool()/free_pool()

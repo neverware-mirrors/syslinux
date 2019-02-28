@@ -9,15 +9,12 @@
 #include "sysdump.h"
 
 static char *lowmem;
-static size_t lowmem_len;
+static const size_t lowmem_len = 640*1024;
 
 void *zero_addr;		/* Hack to keep gcc from complaining */
 
 void snapshot_lowmem(void)
 {
-    extern void _start(void);
-
-    lowmem_len = (size_t)_start;
     lowmem = malloc(lowmem_len);
     if (lowmem) {
 	printf("Snapshotting lowmem... ");

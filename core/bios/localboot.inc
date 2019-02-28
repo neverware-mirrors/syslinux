@@ -1,5 +1,5 @@
 		section .text16
-		global local_boot16:function hidden
+		hidden local_boot16:function
 local_boot16:
 		mov cx,0
 		mov ss,cx

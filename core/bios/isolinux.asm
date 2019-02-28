@@ -43,7 +43,7 @@ ROOT_DIR_WORD	equ 0x002F
 ; Memory below this point is reserved for the BIOS and the MBR
 ;
 		section .earlybss
-		global trackbuf
+		hidden trackbuf
 trackbufsize	equ 8192
 trackbuf	resb trackbufsize	; Track buffer goes here
 ;		ends at 2800h
@@ -51,7 +51,6 @@ trackbuf	resb trackbufsize	; Track buffer goes here
 		; Some of these are touched before the whole image
 		; is loaded.  DO NOT move this to .bss16/.uibss.
 		section .earlybss
-		global BIOSName
 		alignb 4
 FirstSecSum	resd 1			; Checksum of bytes 64-2048
 ImageDwords	resd 1			; isolinux.bin size, dwords
@@ -60,18 +59,18 @@ DiskSys		resw 1			; Last INT 13h call
 ImageSectors	resw 1			; isolinux.bin size, sectors
 ; These following two are accessed as a single dword...
 GetlinsecPtr	resw 1			; The sector-read pointer
+		export BIOSName:data 2
 BIOSName	resw 1			; Display string for BIOS type
-%define HAVE_BIOSNAME 1
-		global BIOSType
+		hidden BIOSType
 BIOSType	resw 1
 DiskError	resb 1			; Error code for disk I/O
-		global DriveNumber
+		hidden DriveNumber
 DriveNumber	resb 1			; CD-ROM BIOS drive number
 ISOFlags	resb 1			; Flags for ISO directory search
 RetryCount      resb 1			; Used for disk access retries
 
 		alignb 8
-		global Hidden
+		hidden Hidden
 Hidden		resq 1			; Used in hybrid mode
 bsSecPerTrack	resw 1			; Used in hybrid mode
 bsHeads		resw 1			; Used in hybrid mode
@@ -83,7 +82,7 @@ bsHeads		resw 1			; Used in hybrid mode
 
 		alignb 8
 _spec_start	equ $
-		global spec_packet
+		hidden spec_packet
 spec_packet:	resb 1				; Size of packet
 sp_media:	resb 1				; Media type
 sp_drive:	resb 1				; Drive number
@@ -155,11 +154,11 @@ _spec_len	equ _spec_end - _spec_start
 ;; CD-ROM sector (2K) of the file, so the number one priority is actually
 ;; loading the rest.
 ;;
-		global StackBuf
-StackBuf	equ STACK_TOP-44	; 44 bytes needed for
+		export StackBuf:data
+StackBuf	equ STACK_TOP		; 44 bytes needed for
 					; the bootsector chainloading
 					; code!
-		global OrigESDI
+		hidden OrigESDI
 OrigESDI	equ StackBuf-4          ; The high dword on the stack
 StackHome	equ OrigESDI
 
@@ -174,7 +173,7 @@ _start:		; Far jump makes sure we canonicalize the address
 		; -boot-info-table option.  If not, the values in this
 		; table are default values that we can use to get us what
 		; we need, at least under a certain set of assumptions.
-		global iso_boot_info
+		hidden iso_boot_info
 iso_boot_info:
 bi_pvd:		dd 16				; LBA of primary volume descriptor
 bi_file:	dd 0				; LBA of boot file
@@ -758,7 +757,7 @@ getonesec:
 ;	ES:BX	- Target buffer
 ;	BP	- Sector count
 ;
-		global getlinsec
+		hidden getlinsec
 getlinsec:	jmp word [cs:GetlinsecPtr]
 
 %ifndef DEBUG_MESSAGES
@@ -1024,7 +1023,7 @@ xint13:		mov byte [RetryCount],retry_count
 ; kaboom: write a message and bail out.  Wait for a user keypress,
 ;	  then do a hard reboot.
 ;
-		global kaboom
+		hidden kaboom
 disk_error:
 kaboom:
 		RESET_STACK_AND_SEGS AX
@@ -1045,11 +1044,6 @@ kaboom:
 ; Data that needs to be in the first sector
 ; -----------------------------------------------------------------------------
 
-		global syslinux_banner, copyright_str
-syslinux_banner	db CR, LF, MY_NAME, ' ', VERSION_STR, ' ', DATE_STR, ' ', 0
-copyright_str   db ' Copyright (C) 1994-'
-		asciidec YEAR
-		db ' H. Peter Anvin et al', CR, LF, 0
 isolinux_str	db 'isolinux: ', 0
 %ifdef DEBUG_MESSAGES
 startup_msg:	db 'Starting up, DL = ', 0
@@ -1084,7 +1078,7 @@ bios_ebios_str	db 'EHDD' ,0
 %endif
 
 		alignz 4
-		global bios_cdrom
+		hidden bios_cdrom
 bios_cdrom:	dw getlinsec_cdrom, bios_cdrom_str
 %ifndef DEBUG_MESSAGES
 bios_cbios:	dw getlinsec_cbios, bios_cbios_str
@@ -1193,16 +1187,6 @@ debug_tracer:	pushad
 		ret
 %endif	; DEBUG_TRACERS
 
-		section .bss16
-		alignb 4
-ThisKbdTo	resd 1			; Temporary holder for KbdTimeout
-ThisTotalTo	resd 1			; Temporary holder for TotalTimeout
-KernelExtPtr	resw 1			; During search, final null pointer
-FuncFlag	resb 1			; Escape sequences received from keyboard
-KernelType	resb 1			; Kernel type, from vkernel, if known
-		global KernelName
-KernelName	resb FILENAME_MAX	; Mangled name for kernel
-
 		section .text16
 ;
 ; COM32 vestigial data structure
@@ -1228,5 +1212,5 @@ KernelName	resb FILENAME_MAX	; Mangled name for kernel
 err_disk_image	db 'Cannot load disk image (invalid file)?', CR, LF, 0
 
 		section .bss16
-		global OrigFDCTabPtr
+		hidden OrigFDCTabPtr
 OrigFDCTabPtr	resd 1			; Keep bios_cleanup_hardware() honest

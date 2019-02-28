@@ -33,8 +33,6 @@
 
 void syslinux_final_cleanup(uint16_t flags)
 {
-    if (syslinux_filesystem() == SYSLINUX_FS_PXELINUX)
-	unload_pxe(flags);
-
+    unload_pxe(flags);
     cleanup_hardware();
 }

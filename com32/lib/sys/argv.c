@@ -35,25 +35,26 @@
 
 #include <inttypes.h>
 #include <stddef.h>
-#include <stdio.h>
-#include <syslinux/align.h>
-#include <com32.h>
+#include <stdlib.h>
+#include <string.h>
+#include <syslinux/argv.h>
 
-extern char _end[];		/* Symbol created by linker */
-void *__mem_end = &_end;	/* Global variable for use by malloc() */
-
-int __parse_argv(char ***argv, const char *str)
+int parse_argv(char ***argv, const char *str, int reserve)
 {
     char dummy_argv0[] = "";
-    char *mem = __mem_end;
+    char *mem = NULL;
     const char *p = str;
     char *q = mem;
     char *r;
-    char **arg;
+    char **arg = NULL;
     int wasspace = 1;
-    int argc = 1;
+    int argc = reserve;
 
     /* First copy the string, turning whitespace runs into nulls */
+    mem = malloc(strlen(str) + 1);
+    if (!mem)
+	goto fail;
+
     for (p = str;; p++) {
 	if (*p <= ' ') {
 	    if (!wasspace) {
@@ -76,9 +77,12 @@ int __parse_argv(char ***argv, const char *str)
     }
 
     /* Now create argv */
-    arg = (char **)ALIGN_UP_FOR(q, char *);
-    *argv = arg;
-    *arg++ = __com32.cs_name ? (char *)__com32.cs_name : dummy_argv0; /* argv[0] */
+    arg = malloc((argc+1) * sizeof(*arg));
+    if (!arg)
+	goto fail;
+
+    memset(arg, 0, reserve * sizeof(*arg));
+    arg += reserve;
 
     q--;			/* Point q to final null */
     if (mem < q)
@@ -91,7 +95,14 @@ int __parse_argv(char ***argv, const char *str)
     }
 
     *arg++ = NULL;		/* Null pointer at the end */
-    __mem_end = arg;		/* End of memory we used */
+    *argv = arg;
 
     return argc;
+
+fail:
+    if (arg)
+	free(arg);
+    if (mem)
+	free(mem);
+    return -1;
 }

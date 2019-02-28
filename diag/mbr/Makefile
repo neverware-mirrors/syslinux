@@ -24,7 +24,6 @@ all:	handoff.bin
 %.o: %.S
 	$(CC) $(MAKEDEPS) $(SFLAGS) -Wa,-a=$*.lst -c -o $@ $<
 
-.PRECIOUS: %.elf
 %.elf: %.o $(mbrdir)/mbr.ld
 	$(LD) $(LDFLAGS) -T $(mbrdir)/$(ARCH)/mbr.ld -e _start -o $@ $<
 

@@ -1,4 +1,4 @@
-;
+
 ; The prefix is a small structure that prefaces the actual code;
 ; it gives the compression program necessary information.
 ;

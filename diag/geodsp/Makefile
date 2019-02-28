@@ -25,8 +25,8 @@ VPATH = $(SRC)
 BTARGET = geodsp1s.bin geodsp1s_f.bin geodspms.bin \
 	geodsp1s.img.xz geodspms.img.xz
 
-NASMOPT = -i $(coredir)/ -i $(SRC)/ -Ox -f bin -dBINFMT
-NASMOPT += -w+orphan-labels
+NASMFLAGS = -i $(coredir)/ -i $(SRC)/ -Ox -f bin -dBINFMT
+NASMFLAGS += -w+orphan-labels
 CFLAGS = -g -O
 LIBS = $(wildcard $(coredir)/*.inc)
 
@@ -44,10 +44,10 @@ all: $(BTARGET)
 	$(PERL) $(SRC)/mk-lba-img.pl $< > $@ || ( rm -f $@ ; false )
 
 %.bin: %.asm $(LIBS)
-	$(NASM) $(NASMOPT) -o $@ -l $(@:.bin=.lst) $<
+	$(NASM) $(NASMFLAGS) -o $@ -l $(@:.bin=.lst) $<
 
 %_f.bin: %.asm $(LIBS)
-	$(NASM) $(NASMOPT) -o $@ -dFORCE_80 -l $(@:.bin=.lst) $<
+	$(NASM) $(NASMFLAGS) -o $@ -dFORCE_80 -l $(@:.bin=.lst) $<
 
 mk-lba-img: mk-lba-img.c
 	$(CC) $(CFLAGS) -o $@ $<

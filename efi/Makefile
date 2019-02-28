@@ -11,7 +11,7 @@
 ## -----------------------------------------------------------------------
 
 VPATH = $(SRC)
-include $(MAKEDIR)/lib.mk
+include $(MAKEDIR)/elf.mk
 include $(MAKEDIR)/efi.mk
 
 CC_FOR_BUILD ?= $(CC)

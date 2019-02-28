@@ -1,6 +1,6 @@
 # Include configuration rules
 VPATH = $(SRC)
-include $(MAKEDIR)/lib.mk
+include $(MAKEDIR)/elf.mk
 
 REQFLAGS += -I$(SRC) -I$(topdir)/core
 

@@ -22,19 +22,10 @@
 
 __export const com32sys_t zero_regs;	/* Common all-zero register set */
 
-static inline uint32_t eflags(void)
+static inline unsigned long eflags(void)
 {
-    //uint32_t v;
-
-#if __SIZEOF_POINTER__ == 4
-    uint32_t v;
-    asm volatile("pushfl ; popl %0" : "=rm" (v));
-#elif __SIZEOF_POINTER__ == 8
-    uint64_t v;
-    asm volatile("pushfq ; pop %0" : "=rm" (v));
-#else
-#error "Unable to build for to-be-defined architecture type"
-#endif
+    unsigned long v;
+    asm volatile("pushf ; pop %0" : "=rm" (v));
     return v;
 }
 
@@ -46,5 +37,5 @@ __export void call16(void (*func)(void), const com32sys_t *ireg,
     /* Enable interrupts if and only if they are enabled in the caller */
     xreg.eflags.l = (xreg.eflags.l & ~EFLAGS_IF) | (eflags() & EFLAGS_IF);
 
-    core_farcall((size_t)func, &xreg, oreg);
+    ___farcall((size_t)func, &xreg, oreg);
 }

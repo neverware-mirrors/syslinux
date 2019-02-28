@@ -157,7 +157,7 @@ void load_env32(com32sys_t * regs __unused)
 {
 	struct file_info *fp;
 	int fd;
-	char *argv[] = { LDLINUX, NULL };
+	const char * const argv[] = { LDLINUX, NULL };
 	char realname[FILENAME_MAX];
 	size_t size;
 
@@ -175,7 +175,7 @@ void load_env32(com32sys_t * regs __unused)
 		NULL
 	};
 
-	dprintf("Starting %s elf module subsystem...\n", ELF_MOD_SYS);
+	dprintf("Starting %d-bit ELF module subsystem...\n", ELF_CLASS_SIZE);
 
 	if (strlen(CurrentDirName) && !path_add(CurrentDirName)) {
 		printf("Couldn't allocate memory for PATH\n");

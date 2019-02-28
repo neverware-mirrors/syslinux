@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 
+#define NOFLOAT 1		/* SYSLINUX */
+
 /* Version: */
 
 #define ZZJSON_VERSION_MAJOR    1
@@ -73,7 +75,9 @@ typedef struct ZZJSON {
         struct {
             union {
                 unsigned long long ival;
+#ifndef NOFLOAT
                 double             dval;
+#endif
             } val;
         } number;
     } value;

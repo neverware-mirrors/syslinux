@@ -34,12 +34,14 @@ ZZJSON *zzjson_create_null(ZZJSON_CONFIG *config) {
     return zzjson_create_templ(config, ZZJSON_NULL);
 }
 
+#ifndef NOFLOAT
 ZZJSON *zzjson_create_number_d(ZZJSON_CONFIG *config, double d) {
     ZZJSON *zzjson = zzjson_create_templ(config, ZZJSON_NUMBER_DOUBLE);
     if (zzjson)
         zzjson->value.number.val.dval = d;
     return zzjson;
 }
+#endif
 
 ZZJSON *zzjson_create_number_i(ZZJSON_CONFIG *config, long long i) {
     ZZJSON *zzjson = zzjson_create_templ(config, ZZJSON_NUMBER_NEGINT);

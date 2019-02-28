@@ -124,7 +124,7 @@ void chainboot_file(const char *file, uint32_t type)
     } else {
 	const uint16_t *esdi = (const uint16_t *)sdi->disk.esdi_ptr;
 
-	regs.esp.l = (uint16_t)(unsigned long)StackBuf + 44;
+	regs.esp.l = (uint16_t)(size_t)StackBuf;
 
 	/*
 	 * DON'T DO THIS FOR PXELINUX...

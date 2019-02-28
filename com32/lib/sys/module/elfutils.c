@@ -63,9 +63,9 @@ int elf_malloc(void **memptr, size_t alignment, size_t size) {
 	return 0;
 }
 
-void elf_free(char *memptr) {
-	struct memalign_info *info = (struct memalign_info*)(memptr -
-			sizeof(struct memalign_info));
+void elf_free(void *memptr) {
+    struct memalign_info *info = (struct memalign_info*)
+	((char *)memptr - sizeof(struct memalign_info));
 
 	free(info->start_addr);
 }

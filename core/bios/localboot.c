@@ -35,7 +35,7 @@ extern void local_boot16(void);
  * Boot a specified local disk.  AX specifies the BIOS disk number; or
  * -1 in case we should execute INT 18h ("next device.")
  */
-__export void __attribute__((weak)) local_boot(int16_t ax)
+__export void __weak local_boot(int16_t ax)
 {
 	com32sys_t ireg, oreg;
 	int i;

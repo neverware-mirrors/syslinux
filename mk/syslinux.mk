@@ -18,6 +18,11 @@
 MAKEFLAGS += -r
 MAKE      += -r
 
+# Preserve intermediate files
+.SECONDARY:
+
+VPATH    = $(SRC)
+
 BINDIR   = /usr/bin
 SBINDIR  = /sbin
 LIBDIR   = /usr/lib
@@ -38,7 +43,7 @@ DEBUGOPT = -DDEBUG=$(DEBUG)
 endif
 
 NASM	 = nasm
-NASMOPT  = -Ox $(DEBUGOPT)
+NASMFLAGS  = -Ox $(DEBUGOPT)
 
 PERL	 = perl
 PYTHON	 = python
@@ -91,6 +96,9 @@ MAKEDEPS = -MT $@ -MD -MF $(@D)/.$(@F).d
 # Dependencies that exclude system headers; use whenever we use
 # header files from the platform.
 UMAKEDEPS = -MT $@ -MMD -MF $(@D)/.$(@F).d
+
+# Version number
+-include $(topdir)/version.mk
 
 # Items that are only appropriate during development; this file is
 # removed when tarballs are generated.

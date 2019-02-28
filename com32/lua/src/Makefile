@@ -15,7 +15,6 @@
 ## Lua Makefile
 ##
 
-VPATH = $(SRC)
 include $(MAKEDIR)/elf.mk
 
 LNXLIBS	   = 
@@ -38,6 +37,7 @@ TESTFILES =
 OBJS	  = lua.o
 
 LIBLUA    = liblua.c32
+EXTRALIBS = $(LIBLUA)
 
 LIBLUA_OBJS := lapi.o lcode.o lctype.o ldebug.o ldo.o ldump.o lfunc.o
 LIBLUA_OBJS += lgc.o llex.o lmem.o lobject.o lopcodes.o lparser.o
@@ -48,17 +48,15 @@ LIBLUA_OBJS += loslib.o lstrlib.o ltablib.o loadlib.o linit.o
 
 CFLAGS += -DLUA_ANSI
 
-all: $(MODULES) $(TESTFILES)
+all: $(LIBLUA) $(MODULES) $(TESTFILES)
 
-liblua.elf : $(LIBLUA_OBJS)
-	$(LD) $(LDFLAGS) -shared -soname $(patsubst %.elf,%.c32,$(@F)) \
-		-o $@ $^
+liblua.elf : $(LIBLUA_OBJS) $(C_LIBS)
+	$(LD) $(LDFLAGS) $(SHARED) -o $@ $^
 
-lua.elf : $(OBJS) $(LIBLUA) $(C_LIBS)
-	$(LD) $(LDFLAGS) -o $@ $^
+LIBMENU = $(objdir)/com32/cmenu/libmenu/libmenu.c32
 
 cmenu.o : CFLAGS += -I$(com32)/cmenu/libmenu
-cmenu.elf : $(objdir)/com32/cmenu/libmenu/libmenu.c32
+cmenu.elf : EXTRALIBS += $(LIBMENU)
 
 tidy dist:
 	rm -f *.o *.lo *.lst *.elf .*.d *.tmp

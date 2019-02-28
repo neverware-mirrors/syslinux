@@ -89,14 +89,6 @@ extern struct com32_sys_args {
     const struct com32_pmapi *cs_pm;
 } __com32;
 
-/*
- * System call wrapper functions
- */
-void __intcall(uint8_t __i, const com32sys_t * __sr, com32sys_t * __dr);
-void __farcall(uint16_t __cs, uint16_t __ip,
-	       const com32sys_t * __sr, com32sys_t * __dr);
-int __cfarcall(uint16_t __cs, uint16_t __ip,
-	       const void *__stack, uint32_t __stack_size);
 extern const com32sys_t __com32_zero_regs;
 
 /*
@@ -186,6 +178,32 @@ static inline far_ptr_t FAR_PTR(void *__ptr)
     __fptr.offs = OFFS(__ptr);
     __fptr.seg  = SEG(__ptr);
     return __fptr;
+}
+
+/*
+ * BIOS callback functions
+ */
+void __intcall(uint8_t __i, const com32sys_t *__sr, com32sys_t *__dr);
+void ___farcall(uint32_t __csip, const com32sys_t *__sr, com32sys_t *__dr);
+static inline void
+__farcall(uint16_t __cs, uint16_t __ip, const com32sys_t *__sr, com32sys_t *__dr)
+{
+    far_ptr_t __csip;
+
+    __csip.offs = __ip;
+    __csip.seg  = __cs;
+    ___farcall(__csip.ptr, __sr, __dr);
+}
+
+int32_t ___cfarcall(uint32_t __csip, const void *__stk, uint32_t __stksize);
+static inline int32_t
+__cfarcall(uint16_t __cs, uint16_t __ip, const void *__stk, uint32_t __stksize)
+{
+    far_ptr_t __csip;
+
+    __csip.offs = __ip;
+    __csip.seg  = __cs;
+    return ___cfarcall(__csip.ptr, __stk, __stksize);
 }
 
 extern const char *com32_cmdline(void);

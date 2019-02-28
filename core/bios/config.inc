@@ -35,6 +35,6 @@ FILENAME_MAX	 equ (1 << FILENAME_MAX_LG2)	; Max mangled filename size
 ;
 ; Version number definitinons
 ;
-%include "../version.gen"
+%include "version.gen"
 
 %endif ; _CONFIG_INC

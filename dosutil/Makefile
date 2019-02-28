@@ -13,7 +13,7 @@ WCL_IS_GOOD := $(shell $(WCL) $(WCLOPT) \
 UPX     = upx
 
 NASM    = nasm
-NASMOPT = -Ox
+NASMFLAGS = -Ox
 
 WCTARGETS = mdiskchk.com
 NSTARGETS = eltorito.sys copybs.com
@@ -33,7 +33,7 @@ TARGETS   = $(WCTARGETS) $(NSTARGETS)
 	chmod a-x $@
 
 %.sys: %.asm
-	$(NASM) $(NASMOPT) -f bin -o $@ -l $*.lst $<
+	$(NASM) $(NASMFLAGS) -f bin -o $@ -l $*.lst $<
 	$(UPX) --ultra-brute --lzma $@ || \
 		$(UPX) --ultra-brute $@ || \
 		true
@@ -41,7 +41,7 @@ TARGETS   = $(WCTARGETS) $(NSTARGETS)
 	chmod a-x $@
 
 %.com: %.asm
-	$(NASM) $(NASMOPT) -f bin -o $@ -l $*.lst $<
+	$(NASM) $(NASMFLAGS) -f bin -o $@ -l $*.lst $<
 	$(UPX) --ultra-brute --lzma $@ || \
 		$(UPX) --ultra-brute $@ || \
 		true

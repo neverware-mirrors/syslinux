@@ -46,8 +46,6 @@
 /utils/isohybrid.pl
 /utils/memdiskfind
 /utils/mkdiskimage
-/version.h
-/version.mk
 *GPATH
 *GRTAGS
 *GTAGS

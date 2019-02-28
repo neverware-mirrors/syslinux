@@ -68,7 +68,6 @@ syslinux.cfg.txt:	com-bug.txt com-rpt.txt
 
 # During 'make all', *.xml is kept but deleted at the end; do we _really_
 #	need the XML longer?
-.PRECIOUS:	%.xml
 
 # %.html:	%.txt
 # 	asciidoc -D html $<

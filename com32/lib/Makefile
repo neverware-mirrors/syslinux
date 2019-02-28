@@ -2,10 +2,152 @@
 # ONLY INCLUDE MIT OR 2/3-BSD-LICENSED CODE IN THIS LIBRARY
 #
 
-# Include configuration rules
 NOGPL := 1
+include $(MAKEDIR)/elf.mk
+
+ARCH_MATH_OBJS = \
+	$(patsubst $(com32)/lib/%.c,%.o,$(wildcard $(com32)/lib/$(ARCH)/math/*.c)) \
+	$(patsubst $(com32)/lib/%.S,%.o,$(wildcard $(com32)/lib/$(ARCH)/math/*.S))
+
 VPATH = $(SRC)
-include $(MAKEDIR)/lib.mk
+LIBOTHER_OBJS = \
+	atoi.o atol.o atoll.o calloc.o creat.o		\
+	fgets.o fprintf.o fputc.o	\
+	putchar.o				\
+	getopt_common.o getopt.o getopt_long.o				\
+	lrand48.o stack.o memccpy.o memchr.o		\
+	mempcpy.o memmem.o memmove.o memswap.o	\
+	perror.o qsort.o seed48.o \
+	srand48.o sscanf.o						\
+	strerror.o errlist.o		\
+	strnlen.o							\
+	strncat.o strndup.o		\
+	stpncpy.o						\
+	strntoimax.o strsep.o strspn.o strstr.o				\
+	strtoimax.o strtok.o strtol.o strtoll.o strtoull.o		\
+	strtoumax.o vprintf.o vsprintf.o		\
+	asprintf.o vasprintf.o			\
+	vsscanf.o							\
+	skipspace.o							\
+	chrreplace.o							\
+	bufprintf.o							\
+	inet.o dhcppack.o dhcpunpack.o					\
+	strreplace.o							\
+	lstrdup.o						\
+	\
+	suffix_number.o							\
+	\
+	getcwd.o fdopendir.o	\
+	\
+	sys/line_input.o				\
+	sys/colortable.o sys/screensize.o				\
+	\
+	sys/stdcon_read.o sys/stdcon_write.o sys/rawcon_read.o		\
+	sys/rawcon_write.o		\
+	sys/null_read.o sys/null_write.o sys/serial_write.o		\
+	\
+	sys/argv.o							\
+	\
+	sys/xserial_write.o						\
+	\
+	sys/ansi.o							\
+	\
+	sys/ansicon_write.o sys/ansiserial_write.o			\
+	\
+	pci/cfgtype.o pci/scan.o pci/bios.o					\
+	pci/readb.o pci/readw.o pci/readl.o			\
+	pci/writeb.o pci/writew.o pci/writel.o	\
+	\
+	$(ARCH_MATH_OBJS)						\
+	syslinux/disk.o							\
+	\
+	syslinux/setup_data.o
+
+
+##	math/strtod.o
+
+## CORE OBJECTS, INCLUDED IN THE ROOT COM32 MODULE
+LIBENTRY_OBJS = \
+	sys/zeroregs.o	sys/sleep.o					\
+	\
+	sys/fileinfo.o sys/opendev.o sys/read.o sys/write.o sys/ftell.o \
+	sys/close.o sys/open.o sys/fileops.o				\
+	sys/openmem.o							\
+	sys/isatty.o sys/fstat.o					\
+	\
+	dprintf.o vdprintf.o						\
+	\
+	syslinux/idle.o							\
+	\
+	exit.o
+
+LIBGCC_OBJS = \
+	  $(patsubst $(com32)/lib/%.c,%.o,$(wildcard $(com32)/lib/$(ARCH)/libgcc/*.c)) \
+	  $(patsubst $(com32)/lib/%.S,%.o,$(wildcard $(com32)/lib/$(ARCH)/libgcc/*.S))
+
+LIBCONSOLE_OBJS = \
+	\
+	sys/openconsole.o sys/line_input.o				\
+	sys/colortable.o sys/screensize.o				\
+	\
+	sys/stdcon_read.o sys/rawcon_read.o		\
+	sys/rawcon_write.o						\
+	sys/null_write.o sys/serial_write.o		\
+	\
+	sys/xserial_write.o						\
+	\
+	sys/ansi.o							\
+	\
+	sys/ansicon_write.o sys/ansiserial_write.o	\
+	\
+	syslinux/serial.o
+
+LIBLOAD_OBJS = \
+	syslinux/addlist.o syslinux/freelist.o syslinux/memmap.o	\
+	syslinux/movebits.o syslinux/shuffle.o syslinux/shuffle_pm.o	\
+	syslinux/shuffle_rm.o syslinux/biosboot.o syslinux/zonelist.o	\
+	syslinux/dump_mmap.o syslinux/dump_movelist.o			\
+	\
+	syslinux/run_default.o syslinux/run_command.o			\
+	syslinux/cleanup.o syslinux/localboot.o	syslinux/runimage.o	\
+	\
+	syslinux/loadfile.o syslinux/floadfile.o syslinux/zloadfile.o	\
+	\
+	syslinux/load_linux.o syslinux/initramfs.o			\
+	syslinux/initramfs_file.o syslinux/initramfs_loadfile.o		\
+	syslinux/initramfs_archive.o
+
+LIBMODULE_OBJS = \
+	sys/module/common.o sys/module/$(ARCH)/elf_module.o		\
+	sys/module/elfutils.o	\
+	sys/module/exec.o sys/module/elf_module.o
+
+# ZIP library object files
+LIBZLIB_OBJS = \
+	zlib/adler32.o zlib/compress.o zlib/crc32.o			\
+	zlib/uncompr.o zlib/deflate.o zlib/trees.o zlib/zutil.o		\
+	zlib/inflate.o zlib/infback.o zlib/inftrees.o zlib/inffast.o	\
+	sys/zfile.o sys/zfopen.o
+
+CORELIBOBJS = \
+	errno.o memcmp.o printf.o strncmp.o vfprintf.o	\
+	strlen.o vsnprintf.o snprintf.o stpcpy.o strcmp.o strdup.o	\
+	strcpy.o strncpy.o fopen.o fread.o fread2.o puts.o	\
+	strtoul.o strntoumax.o strcasecmp.o				\
+	sprintf.o strlcat.o strchr.o strlcpy.o strncasecmp.o ctypes.o	\
+	fputs.o fwrite2.o fwrite.o fgetc.o fclose.o lmalloc.o		\
+	sys/err_read.o sys/err_write.o sys/null_read.o			\
+	sys/stdcon_write.o						\
+	syslinux/memscan.o strrchr.o strcat.o				\
+	syslinux/debug.o						\
+	$(LIBGCC_OBJS) \
+	$(LIBENTRY_OBJS) \
+	$(LIBMODULE_OBJS)
+
+ifneq ($(FWCLASS),EFI)
+# For EFI, these are part of gnu-efi
+CORELIBOBJS += $(ARCH)/setjmp.o memcpy.o memset.o
+endif
 
 ## OPTIONAL OBJECTS, AVAILABLE AS DYNAMIC LINKED MODULES
 # PNG library object files
@@ -45,7 +187,7 @@ LIBPCI_OBJS = \
 LIBSYSLINUX_OBJS = \
 	syslinux/reboot.o syslinux/keyboard.o				\
 	syslinux/version.o						\
-	syslinux/pxe_get_cached.o syslinux/pxe_get_nic.o		\
+	syslinux/nopxe.o syslinux/pxe_get_cached.o syslinux/pxe_get_nic.o \
 	syslinux/video/fontquery.o syslinux/video/reportmode.o
 
 DYNENTRY_OBJS = \
@@ -73,34 +215,34 @@ DYNLIBOBJS = \
 	$(DYNENTRY_OBJS)
 
 
-LIBOBJS = $(DYNLIBOBJS)
+LIBOBJS  = $(DYNLIBOBJS) $(MINLIBOBJS) $(CORELIBOBJS)
 
-BINDIR   = /usr/bin
-LIBDIR   = /usr/lib
-DATADIR  = /usr/share
-AUXDIR   = $(DATADIR)/syslinux
-INCDIR   = /usr/include
-COM32DIR = $(AUXDIR)/com32
+# Exported from the core; WEAKEN is the list of symbols that should be
+# marked weak as they are only present in some of the core versions.
+WEAKEN  = $(objdir)/core/libcore.weak
 
-all: makeoutputdirs libcom32.c32 libcom32min.a libcom32core.a
+TARGETS = makeoutputdirs libcom32.a
+ifndef PRECORE
+TARGETS += libcom32.c32
+endif
+
+all: $(TARGETS)
 
 makeoutputdirs:
-	@mkdir -p $(foreach b, \
-		$(addprefix $(OBJ)/,$(sort $(dir $(LIBOBJS) $(MINLIBOBJS) $(CORELIBOBJS)))),$(b))
+	@mkdir -p  $(sort $(dir $(LIBOBJS)))
 
-libcom32.elf : $(LIBOBJS)
-	rm -f $@
-	$(LD) -shared $(LDFLAGS) -soname $(patsubst %.elf,%.c32,$(@F)) -o $@ $^
-
-libcom32min.a : $(MINLIBOBJS)
+libcom32.a: $(LIBOBJS)
 	rm -f $@
 	$(AR) cq $@ $^
 	$(RANLIB) $@
 
-libcom32core.a : $(CORELIBOBJS)
-	rm -f $@
-	$(AR) cq $@ $^
-	$(RANLIB) $@
+libcom32.elf : libcom32.a $(LIBLDLINUX) $(LIBCORE)
+	$(LD) $(LDFLAGS) $(SHARED) -o $@ \
+		--whole-archive $< --no-whole-archive $(LIBLDLINUX) $(LIBCORE)
+
+libcom32.c32: libcom32.elf $(WEAKEN)
+	$(OBJCOPY) --strip-debug --strip-unneeded \
+		   --weaken-symbols='$(WEAKEN)' $< $@
 
 tidy dist clean:
 	rm -f sys/vesa/alphatbl.c errlist.c

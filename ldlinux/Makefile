@@ -1,6 +1,6 @@
 ## -----------------------------------------------------------------------
 ##
-##   Copyright 2011-2013 Intel Corporation - All Rights Reserved
+##   Copyright 2011-2019 Intel Corporation - All Rights Reserved
 ##
 ##   This program is free software; you can redistribute it and/or modify
 ##   it under the terms of the GNU General Public License as published by
@@ -10,30 +10,34 @@
 ##
 ## -----------------------------------------------------------------------
 
-VPATH = $(SRC)
 include $(MAKEDIR)/elf.mk
 
-CFLAGS += -I$(topdir)/core/elflink -I$(topdir)/core/include -I$(topdir)/com32/lib -fvisibility=hidden
-LIBS = --whole-archive $(objdir)/com32/lib/libcom32min.a
+INCLUDE += -I$(topdir)/core/elflinux -I$(topdir)/core/include \
+	   -I$(com32)/lib
 
-OBJS = ldlinux.o cli.o readconfig.o refstr.o colors.o getadv.o adv.o \
+LDLINUX_LIBS = $(objdir)/com32/lib/libcom32.a $(LIBCORE)
+
+# This makes the core quite a bit smaller, but requires that the proper
+# __export tags are in place. It would be very good to add the same things
+# to the libraries, especially libcom32, for the same reason.
+CFLAGS += -fvisibility=hidden
+
+CFLAGS += -D__LDLINUX__
+
+OBJS = main.o cli.o readconfig.o refstr.o colors.o getadv.o adv.o \
 	execute.o chainboot.o kernel.o get_key.o advwrite.o setadv.o \
 	loadhigh.o msg.o
 
-BTARGET = $(LDLINUX)
+# For some reason ldlinux.elf is deleted even with .PRECIOUS, which
+# breaks the dependencies later on. List it explicitly in the all target
+# to force it to be kept.
+all: $(LDLINUX) ldlinux.elf ldlinux_lnx.a
 
-ifeq ($(FWCLASS),EFI)
-%.e$(BITS): %.elf
+ldlinux.elf: $(OBJS) $(LDLINUX_LIBS)
+	$(LD) $(LDFLAGS) $(SHARED) -soname '$(LDLINUX)' -o $@ $(OBJS) $(LDLINUX_LIBS)
+
+$(LDLINUX): ldlinux.elf
 	$(OBJCOPY) --strip-debug --strip-unneeded $< $@
-SONAME = $(patsubst %.elf,%.e$(BITS),$(@F))
-else
-SONAME = $(patsubst %.elf,%.c32,$(@F))
-endif
-
-all: $(BTARGET) ldlinux_lnx.a
-
-ldlinux.elf : $(OBJS)
-	$(LD) $(LDFLAGS) -soname $(SONAME) -o $@ $^ $(LIBS)
 
 LNXCFLAGS += -D__export='__attribute__((visibility("default")))'
 LNXLIBOBJS = get_key.lo

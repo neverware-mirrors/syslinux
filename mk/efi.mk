@@ -54,11 +54,9 @@ $(LIBEFI):
 
 %.o: %.c
 
-.PRECIOUS: %.o
 %.o: %.S $(LIBEFI)
 	$(CC) $(SFLAGS) -c -o $@ $<
 
-.PRECIOUS: %.o
 %.o: %.c $(LIBEFI)
 	$(CC) $(CFLAGS) -c -o $@ $<
 

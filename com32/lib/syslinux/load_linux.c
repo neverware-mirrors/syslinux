@@ -49,6 +49,7 @@
 #include <syslinux/firmware.h>
 #include <syslinux/video.h>
 #include <syslinux/config.h>
+#include <syslinux/pxe_api.h>	/* For KeepPXE */
 
 #define BOOT_MAGIC 0xAA55
 #define LINUX_MAGIC ('H' + ('d' << 8) + ('r' << 16) + ('S' << 24))
@@ -202,10 +203,7 @@ int bios_boot_linux(void *kernel_buf, size_t kernel_size,
 	}
     }
 
-    if (syslinux_filesystem() == SYSLINUX_FS_PXELINUX &&
-	strstr(cmdline, "keeppxe")) {
-	extern __weak char KeepPXE;
-
+    if (strstr(cmdline, "keeppxe")) {
 	KeepPXE |= 1;		/* for pxelinux_scan_memory */
 	bootflags = 3;		/* for unload_pxe */
     }

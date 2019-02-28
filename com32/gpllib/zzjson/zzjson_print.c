@@ -5,6 +5,13 @@
 
 #include "zzjson.h"
 
+#ifdef CONFIG_NO_ERROR_MESSAGES
+#define ERROR(x...)
+#else
+#define ERROR(x...)     config->error(config->ehandle, ##x)
+#endif
+#define MEMERROR()      ERROR("out of memory")
+
 #define PRINT(fmt...) if (config->print(config->ohandle, ##fmt) < 0) return -1;
 //#define PUTC(c)       if (config->putchar(c, config->ohandle) < 0) return -1;
 #define PUTC(c)       PRINT("%c",c)
@@ -83,7 +90,11 @@ static int zzjson_print2(ZZJSON_CONFIG *config, ZZJSON *zzjson,
         case ZZJSON_NUMBER_DOUBLE:
             PRINT(objval ? " " : "\n%*s", indent, "");
             if (zzjson->type == ZZJSON_NUMBER_DOUBLE) {
+#ifndef NOFLOAT
                 PRINT("%16.16e", zzjson->value.number.val.dval);
+#else
+		ERROR("floats not supported");
+#endif
             } else {
                 if (zzjson->type == ZZJSON_NUMBER_NEGINT) PUTC('-');
                 PRINT("%llu", zzjson->value.number.val.ival);

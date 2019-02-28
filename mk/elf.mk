@@ -42,68 +42,95 @@ GCCOPT += $(call gcc_ok,-falign-functions=0,-malign-functions=0)
 GCCOPT += $(call gcc_ok,-falign-jumps=0,-malign-jumps=0)
 GCCOPT += $(call gcc_ok,-falign-labels=0,-malign-labels=0)
 GCCOPT += $(call gcc_ok,-falign-loops=0,-malign-loops=0)
+GCCOPT += $(call gcc_ok,-DNO_PLT -fno-plt -fvisibility=protected)
 
-com32 = $(topdir)/com32
-core = $(topdir)/core
-
-ifneq ($(NOGPL),1)
-GPLLIB     = $(objdir)/com32/gpllib/libgpl.c32
-GPLINCLUDE = -I$(com32)/gplinclude
-else
-GPLLIB     =
-GPLINCLUDE =
-endif
-
-CFLAGS     = $(GCCOPT) $(GCCWARN) -W -Wall \
-	     -fomit-frame-pointer -D__COM32__ -D__FIRMWARE_$(FIRMWARE)__ -DDYNAMIC_MODULE \
-	     -nostdinc -iwithprefix include \
-	     -I$(com32)/libutil/include -I$(com32)/include \
-		-I$(com32)/include/sys $(GPLINCLUDE) -I$(core)/include \
-		-I$(objdir) -DLDLINUX=\"$(LDLINUX)\"
 ifeq ($(FWCLASS),EFI)
 GCCOPT += -mno-red-zone
 else
 GCCOPT += -mregparm=3 -DREGPARM=3
 endif
 
-SFLAGS     = $(GCCOPT) -D__COM32__ -D__FIRMWARE_$(FIRMWARE)__ 
-LDFLAGS    = -m elf_$(ARCH) -shared --hash-style=gnu -T $(com32)/lib/$(ARCH)/elf.ld --as-needed
-LIBGCC    := $(shell $(CC) $(GCCOPT) --print-libgcc)
+com32 = $(topdir)/com32
+core = $(topdir)/core
+
+STRIP	= strip --strip-all -R .comment -R .note
+
+ifneq ($(NOGPL),1)
+LIBGPL     = $(objdir)/com32/gpllib/libgpl.c32
+GPLINCLUDE = -I$(com32)/gplinclude
+else
+LIBGPL     =
+GPLINCLUDE =
+endif
+# Core symbol export library
+LIBCORE = $(objdir)/core/libcore.so
+# ldlinux.* library
+LIBLDLINUX = $(objdir)/ldlinux/$(LDLINUX)
+# Libraries used for most things
+LIBCOM32  = $(objdir)/com32/lib/libcom32.c32
+LIBUTIL   = $(objdir)/com32/libutil/libutil.c32
+
+INCLUDE =  -nostdinc -iwithprefix include -I$(SRC) \
+	     -I$(com32)/libutil/include -I$(com32)/include \
+	     -I$(com32)/include/sys $(GPLINCLUDE) -I$(core)/include \
+	     -I$(objdir)
+
+OPTFLAGS  = -Os -march=$(ARCH) -falign-functions=0 -falign-jumps=0 \
+	    -falign-labels=0 -ffast-math -fomit-frame-pointer
+WARNFLAGS = $(GCCWARN) -Wpointer-arith -Wwrite-strings \
+	    -Wstrict-prototypes -Winline
+
+REQFLAGS  = $(GCCOPT) -g -D__COM32__ -D__FIRMWARE_$(FIRMWARE)__ \
+	     -DLDLINUX=\"$(LDLINUX)\" $(INCLUDE)
+
+CFLAGS     = $(REQFLAGS) $(OPTFLAGS) $(WARNFLAGS)
+
+SFLAGS     = $(REQFLAGS) -D__ASSEMBLY__
+LDSCRIPT   	= $(com32)/lib/$(ARCH)/elf.ld
+MAIN_LDFLAGS	= -m elf_$(ARCH) -Bsymbolic --hash-style=gnu \
+		  -z combreloc -z now -z defs \
+		  --no-allow-shlib-undefined \
+		  --as-needed -nostdlib --copy-dt-needed-entries
+LDFLAGS    = $(MAIN_LDFLAGS) -T $(LDSCRIPT)
+
+ifeq ($(ARCH),i386)
+NASMFLAGS += -f elf
+else
+NASMFLAGS += -f elf64
+endif
+NASMDEBUG  = -g -F dwarf
+NASMFLAGS += $(NASMDEBUG) -D__$(ARCH)__ -I$(SRC)/ $(filter -D%,$(CFLAGS))
 
 LNXCFLAGS  = -I$(com32)/libutil/include -W -Wall -O -g -D_GNU_SOURCE
 LNXSFLAGS  = -g
 LNXLDFLAGS = -g
 
-C_LIBS	   += $(objdir)/com32/libutil/libutil.c32 $(GPLLIB) \
-	     $(objdir)/com32/lib/libcom32.c32
+C_LIBS	   += $(LIBUTIL) $(LIBGPL) $(LIBCOM32) $(LIBLDLINUX) $(LIBCORE)
 C_LNXLIBS  = $(objdir)/com32/libutil/libutil_lnx.a \
 	     $(objdir)/com32/elflink/ldlinux/ldlinux_lnx.a
 
-.SUFFIXES: .lss .c .o
+# Add to ldflags when creating a shared library
+# The \ are escaped so their expansion is deferred
+SHARED = -shared -soname '$(patsubst %.elf,%.c32,$(@F))'
 
-.PRECIOUS: %.o
+%.o: %.asm
+	$(NASM) $(NASMFLAGS) -l $*.lsr -o $@ -MP -MD $(@D)/.$(@F).d $<
+
 %.o: %.S
 	$(CC) $(SFLAGS) -c -o $@ $<
 
-.PRECIOUS: %.o
+%.s: %.c
+	$(CC) $(CFLAGS) -S -o $@ $<
+
+%.i: %.c
+	$(CC) $(CFLAGS) -E -o $@ $<
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-.PRECIOUS: %.lo
-%.lo: %.S
-	$(CC) $(LNXSFLAGS) -c -o $@ $<
-
-.PRECIOUS: %.lo
-%.lo: %.c
-	$(CC) $(LNXCFLAGS) -c -o $@ $<
-
-.PRECIOUS: %.lnx
-%.lnx: %.lo $(LNXLIBS) $(C_LNXLIBS)
-	$(CC) $(LNXCFLAGS) -o $@ $^
-
-.PRECIOUS: %.elf
-%.elf: %.o $(C_LIBS)
-	$(LD) $(LDFLAGS) -o $@ $^
+%.elf: %.o $(EXTRALIBS) $(C_LIBS)
+	$(LD) $(LDFLAGS) $(SHARED) -o $@ $< $(OBJS_$(*F)) $(LIBS_$(*F)) \
+		$(EXTRALIBS) $(C_LIBS)
 
 %.c32: %.elf
 	$(OBJCOPY) --strip-debug --strip-unneeded $< $@

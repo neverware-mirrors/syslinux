@@ -88,6 +88,8 @@ const char *ontimeout = NULL;	//"ontimeout" command line
 
 __export const char *default_cmd = NULL;	//"default" command line
 
+static char KernelName[FILENAME_MAX];
+
 /* Empty refstring */
 const char *empty_string;
 
@@ -767,8 +769,8 @@ extern void write_serial_str(char *);
 extern void loadfont(const char *);
 extern void loadkeys(const char *);
 
-extern char syslinux_banner[];
-extern char copyright_str[];
+extern const char syslinux_banner[];
+extern const char copyright_str[];
 
 /*
  * PATH-based lookup

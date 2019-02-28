@@ -16,7 +16,7 @@
 
 topdir = ../..
 MAKEDIR = $(topdir)/mk
-include $(MAKEDIR)/lib.mk
+include $(MAKEDIR)/elf.mk
 
 CFLAGS += -fPIE
 
@@ -31,7 +31,7 @@ OBJS = main.o int.o serial.o gdbstub.o
 all: $(MODULES) $(TESTFILES)
 
 gdbstub.elf : $(OBJS)
-	$(LD) -shared $(LDFLAGS) -soname $(patsubst %.elf,%.c32,$(@F)) -o $@ $^
+	$(LD) $(LDFLAGS) $(SHARED) -o $@ $^
 
 tidy dist clean:
 	rm -f *.o *.lo *.a *.lst *.elf .*.d *.tmp

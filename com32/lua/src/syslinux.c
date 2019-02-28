@@ -36,13 +36,12 @@
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
-#include "syslinux/boot.h"
-#include "syslinux/loadfile.h"
-#include "syslinux/linux.h"
-#include "syslinux/config.h"
-#include "syslinux/reboot.h"
-
-int __parse_argv(char ***argv, const char *str);
+#include <syslinux/boot.h>
+#include <syslinux/loadfile.h>
+#include <syslinux/linux.h>
+#include <syslinux/config.h>
+#include <syslinux/reboot.h>
+#include <syslinux/argv.h>
 
 static const char SYSLINUX_FILE[] = "syslinux_file";
 static const char SYSLINUX_INITRAMFS[] = "syslinux_initramfs";
@@ -147,7 +146,7 @@ static int sl_boot_linux(lua_State * L)
     int ret;
     char **argv, **argp, *arg, *p;
 
-    ret = __parse_argv(&argv, cmdline);
+    ret = parse_argv(&argv, cmdline, 1);
 
     newcmdline = malloc(strlen(kernel) + 12);
     if (!newcmdline)

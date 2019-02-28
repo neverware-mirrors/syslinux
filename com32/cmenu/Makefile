@@ -17,29 +17,23 @@
 
 NOGPL := 1
 
-LIBS  = libmenu/libmenu.c32 \
-        $(objdir)/com32/libutil/libutil.c32 \
-        $(objdir)/com32/lib/libcom32.c32
-
-C_LIBS	  = libmenu/libmenu.c32
-
-VPATH = $(SRC)
 include $(MAKEDIR)/elf.mk
 
 CFLAGS	  += -I$(SRC)/libmenu
 
-LIBMENU = libmenu/syslnx.o libmenu/com32io.o libmenu/tui.o \
-	libmenu/menu.o libmenu/passwords.o libmenu/des.o libmenu/help.o \
-	$(objdir)/com32/libutil/libutil.c32 $(objdir)/com32/lib/libcom32.c32
+LIBMENU = libmenu/libmenu.c32
+EXTRALIBS = $(LIBMENU)
+
+LIBMENU_OBJS = libmenu/syslnx.o libmenu/com32io.o libmenu/tui.o \
+	       libmenu/menu.o libmenu/passwords.o libmenu/des.o libmenu/help.o
 
 CMENUS = $(patsubst %.c,%.c32,$(sort $(wildcard $(SRC)/*.c)))
 IMENUS = $(patsubst %.menu,%.c32,$(sort $(wildcard $(SRC)/*.menu)))
 
-MENUS = $(LIBS) $(subst $(SRC)/,,$(CMENUS) $(IMENUS))
+MENUS = $(LIBMENU) $(subst $(SRC)/,,$(CMENUS) $(IMENUS))
 
 .SUFFIXES: .S .c .o .elf .c32 .menu
 
-.PRECIOUS: %.c
 %.c: %.menu adv_menu.tpl
 	$(PYTHON) $(SRC)/menugen.py --input=$< --output=$@ --template=$(SRC)/adv_menu.tpl
 
@@ -48,9 +42,8 @@ all:	makeoutputdirs menus
 makeoutputdirs:
 	@mkdir -p $(OBJ)/libmenu
 
-libmenu/libmenu.elf: $(LIBMENU)
-	$(LD) -shared $(LDFLAGS) -soname $(patsubst %.elf,%.c32,$(@F)) \
-		-o $@ $^
+libmenu/libmenu.elf: $(LIBMENU_OBJS) $(C_LIBS)
+	$(LD) $(LDFLAGS) $(SHARED) -o $@ $^
 
 tidy dist:
 	rm -f *.o *.lo *.lst *.elf */*.o */*.elf .*.d */.*.d

@@ -5,7 +5,7 @@
 
 PXEIRQ_MAX	equ 100		; Max spurious interrupts in a timer tick
 
-		global pxe_isr
+		hidden pxe_isr
 pxe_isr:
 		cld
 		pusha
@@ -73,7 +73,7 @@ pxe_isr:
 		pop ds
 		popa
 		jmp 0:0
-		global pxe_irq_chain
+		hidden pxe_irq_chain
 pxe_irq_chain	equ $-4
 
 .reset_timeout:
@@ -101,7 +101,7 @@ pxe_irq_chain	equ $-4
 
 
 ; Emulate a PXE interrupt from the polling thread
-		global pxe_poll
+		hidden pxe_poll
 pxe_poll:
 		pushf
 		cli
@@ -159,13 +159,13 @@ pxenv_undi_isr_buf:
 pxeirq_last	resw 1
 pxeirq_deadman	resw 1
 
-		global pxe_irq_count
+		hidden pxe_irq_count
 pxe_irq_count	resd 1			; PXE IRQ counter
-		global pxe_irq_vector
+		hidden pxe_irq_vector
 pxe_irq_vector	resb 1			; PXE IRQ vector
-		global pxe_irq_pending
+		hidden pxe_irq_pending
 pxe_irq_pending	resb 1			; IRQ pending flag
-		global pxe_need_poll
+		hidden pxe_need_poll
 pxe_need_poll	resb 1			; Bit 0 = need polling
 					; Bit 1 = polling active
 

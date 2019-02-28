@@ -26,9 +26,7 @@
  * ----------------------------------------------------------------------- */
 
 /*
- * read.c
- *
- * Reading from a file
+ * Operations on an ordinary file
  */
 
 #include <errno.h>
@@ -97,3 +95,20 @@ ssize_t __file_read(struct file_info * fp, void *buf, size_t count)
 
     return n;
 }
+
+int __file_close(struct file_info *fp)
+{
+    if (fp->i.fd.handle)
+	close_file(fp->i.fd.handle);
+
+    return 0;
+}
+
+const struct input_dev __file_dev = {
+    .dev_magic = __DEV_MAGIC,
+    .flags = __DEV_FILE | __DEV_INPUT,
+    .fileflags = O_RDONLY,
+    .read = __file_read,
+    .close = __file_close,
+    .open = NULL,
+};

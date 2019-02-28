@@ -12,13 +12,12 @@
 ## -----------------------------------------------------------------------
 
 include $(MAKEDIR)/embedded.mk
--include $(topdir)/version.mk
 
 INCLUDES = -I$(topdir)/com32/include -I$(objdir)
 CFLAGS  += -D__MEMDISK__ -DDATE='"$(DATE)"' -mregparm=3 -DREGPARM=3
 LDFLAGS  = $(GCCOPT) -g
 NASM     = nasm
-NASMOPT  = -Ox
+NASMFLAGS  = -Ox
 NFLAGS   = -dDATE='"$(DATE)"'
 NINCLUDE = -I$(SRC)/
 
@@ -70,12 +69,11 @@ memdisk16.o: memdisk16.asm
 
 memdisk16.o: memdisk16.asm
 	( $(NASM) -M -DDEPEND $(NFLAGS) $(NINCLUDE) -o $@ $< ; echo '' ) > .$@.d ; true
-	$(NASM) -f elf $(NASMOPT) $(NFLAGS) $(NINCLUDE) -o $@ -l $*.lst $<
+	$(NASM) -f elf $(NASMFLAGS) $(NFLAGS) $(NINCLUDE) -o $@ -l $*.lst $<
 
-.PRECIOUS: %.bin
 %.bin: %.asm
 	( $(NASM) -M -DDEPEND $(NFLAGS) $(NINCLUDE) -o $@ $< ; echo '' ) > .$@.d ; true
-	$(NASM) -f bin $(NASMOPT) $(NFLAGS) $(NINCLUDE) -o $@ -l $*.lst $<
+	$(NASM) -f bin $(NASMFLAGS) $(NFLAGS) $(NINCLUDE) -o $@ -l $*.lst $<
 
 memdisk_%.o: memdisk_%.bin
 	$(LD) --oformat elf32-i386 -r -b binary -o $@ $<

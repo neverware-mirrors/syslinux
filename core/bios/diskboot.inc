@@ -28,9 +28,11 @@
 ; reduce the code size...
 ;
 
-		global StackBuf, PartInfo, Hidden, OrigESDI, DriveNumber
-		global OrigFDCTabPtr
-StackBuf	equ STACK_TOP-44-92	; Start the stack here (grow down - 4K)
+		hidden Hidden, OrigESDI, DriveNumber
+		hidden OrigFDCTabPtr
+		export StackBuf:data
+StackBuf	equ STACK_TOP-92	; Start the stack here (grow down - 4K)
+		hidden PartInfo
 PartInfo	equ StackBuf
 .mbr		equ PartInfo
 .gptlen		equ PartInfo+16
@@ -192,7 +194,8 @@ harddisk:
 		add dx,si
 		cmp dx,4fh		; DS:SI < 50h:0 (BDA or IVT) ?
 		jbe .no_partition
-		cmp dx,(PartInfo-75)>>4	; DS:SI in overwritten memory?
+		; DS:SI in overwritten memory?
+		cmp dx,(PartInfo-75-STACK_TOP+_STACK_TOP) >> 4
 		jae .no_partition
 		test byte [di-76],7Fh	; Sanity check: "active flag" should
 		jnz .no_partition	; be 00 or 80
@@ -386,9 +389,9 @@ getonesec_cbios:
 ; kaboom: write a message and bail out.
 ;
 %ifdef BINFMT
-		global kaboom
+		hidden kaboom
 %else
-		global kaboom:function hidden
+		hidden kaboom:function
 %endif
 disk_error:
 kaboom:

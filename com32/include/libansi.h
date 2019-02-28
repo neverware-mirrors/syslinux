@@ -52,8 +52,9 @@ void disable_utf8(void);
 void set_g1_special_char(void);
 void set_us_g0_charset(void);
 void clear_entire_screen(void);
-void clearwindow(const char top, const char left, const char bot,
-		 const char right, const char fillchar, const char fillattr);
+void clearwindow(int top, int left, int bot, int right,
+		 char fillchar, unsigned char fillattr);
+void gotoxy(int row, int col);
 
 static inline void beep(void)
 {
@@ -63,10 +64,10 @@ static inline void beep(void)
 void reset_colors(void);
 
 /* Print a string */
-void csprint(const char *, const char);
+void csprint(const char *, unsigned char);
 
 /* Print one character, one or more times */
-void cprint(const char, const char, unsigned int);
+void cprint(char, unsigned char, unsigned int);
 
 /* Print one character, once */
 static inline void putch(const char x, char attr)
@@ -96,11 +97,6 @@ static inline void scrollup(int times)
 static inline void scrollup_once(void)
 {
 	printf(CSI "S");
-}
-
-static inline void gotoxy(const char row, const char col)
-{
-	printf(CSI "%d;%dH", row + 1, col + 1);
 }
 
 #endif

@@ -125,9 +125,6 @@
 /* Packed structures */
 #define __packed	__attribute__((packed))
 
-/* Weak symbols */
-#define __weak          __attribute__((weak))
-
 /* Alignment */
 #define __aligned(x)	__attribute__((aligned(x)))
 #define __alignas(x)	__attribute__((aligned(__alignof__(x))))
@@ -139,6 +136,14 @@
 /* Weak symbols */
 #define __weak			__attribute__((weak))
 
+/* Symbols exported from the current module */
+#ifdef NO_PLT
+#define __export		__attribute__((visibility("protected")))
+#else
 #define __export		__attribute__((visibility("default")))
+#endif
+
+/* Symbols *not* to export from the current module */
+#define __hidden		__attribute__((visibility("hidden")))
 
 #endif

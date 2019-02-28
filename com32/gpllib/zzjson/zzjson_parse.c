@@ -9,6 +9,8 @@
 #include <math.h>
 #include <stdio.h>
 
+#define NOFLOAT 1		/* SYSLINUX */
+
 #define GETC()          config->getchar(config->ihandle)
 #define UNGETC(c)       config->ungetchar(c, config->ihandle)
 #define SKIPWS()        skipws(config)
@@ -141,8 +143,11 @@ static ZZJSON *parse_string2(ZZJSON_CONFIG *config) {
 static ZZJSON *parse_number(ZZJSON_CONFIG *config) {
     ZZJSON *zzjson;
     unsigned long long ival = 0, expo = 0;
+    int c, dbl = 0, sign = 1;
+#ifndef NOFLOAT
+    int signexpo = 1;
     double dval = 0.0, frac = 0.0, fracshft = 10.0;
-    int c, dbl = 0, sign = 1, signexpo = 1;
+#endif
 
     SKIPWS();
     c = GETC();
@@ -178,8 +183,10 @@ skip:
     }
 
     while (isdigit(c)) {
+#ifndef NOFLOAT
         frac += (double)(c - '0') / fracshft;
         fracshft *= 10.0;
+#endif
         c = GETC();
     }
 
@@ -192,7 +199,9 @@ skipfrac:
     if (c == '+')
         c = GETC();
     else if (c == '-') {
+#ifndef NOFLOAT
         signexpo = -1;
+#endif
         c = GETC();
     }
 
@@ -210,11 +219,13 @@ skipfrac:
 skipexpo:
     UNGETC(c);
 
+#ifndef NOFLOAT
     if (dbl) {
         dval = sign * (long long) ival;
         dval += sign * frac;
         dval *= pow(10.0, (double) signexpo * expo);
     }
+#endif
 
     zzjson = config->calloc(1, sizeof(ZZJSON));
     if (!zzjson) {
@@ -223,7 +234,9 @@ skipexpo:
     }
     if (dbl) {
         zzjson->type = ZZJSON_NUMBER_DOUBLE;
+#ifndef NOFLOAT
         zzjson->value.number.val.dval = dval;
+#endif
     } else {
         zzjson->type = sign < 0 ? ZZJSON_NUMBER_NEGINT : ZZJSON_NUMBER_POSINT;
         zzjson->value.number.val.ival = ival;

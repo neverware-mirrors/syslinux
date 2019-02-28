@@ -44,6 +44,8 @@
 %include "macros.inc"
 ; %include "layout.inc"
 
+_STACK_TOP	equ 7c00h
+
 m_CHS0		equ 00534843h		;'CHS',0
 m_EDD0		equ 00444445h		;'EDD',0
 m_EDD_SP	equ 20444445h		;'EDD '

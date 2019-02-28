@@ -32,7 +32,6 @@ all:	mbr.bin   altmbr.bin   gptmbr.bin   isohdpfx.bin   isohdppx.bin \
 %_f.o: %.S
 	$(CC) $(MAKEDEPS) $(SFLAGS) -Wa,-a=$*_f.lst -DFORCE_80 -c -o $@ $<
 
-.PRECIOUS: %.elf
 #%.elf: %.o mbr.ld
 %.elf: %.o $(SRC)/$(ARCH)/mbr.ld
 	$(LD) $(LDFLAGS) -T $(SRC)/$(ARCH)/mbr.ld -e _start -o $@ $<

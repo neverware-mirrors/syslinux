@@ -47,14 +47,14 @@ SECTOR_SIZE	equ TFTP_BLOCKSIZE
 ; Memory below this point is reserved for the BIOS and the MBR
 ;
 		section .earlybss
-                global trackbuf
+                hidden trackbuf
 trackbufsize	equ 8192
 trackbuf	resb trackbufsize	; Track buffer goes here
 		; ends at 2800h
 
 		; These fields save information from before the time
 		; .bss is zeroed... must be in .earlybss
-		global InitStack
+		hidden InitStack
 InitStack	resd 1
 
 		section .bss16
@@ -62,15 +62,14 @@ InitStack	resd 1
 PXEStack	resd 1			; Saved stack during PXE call
 
 		alignb 4
-                global DHCPMagic, RebootTime, BIOSName
+                hidden DHCPMagic, RebootTime
 RebootTime	resd 1			; Reboot timeout, if set by option
 LocalBootType	resw 1			; Local boot return code
 DHCPMagic	resb 1			; PXELINUX magic flags
-BIOSName	resw 1			; Dummy variable - always 0
 
 		section .text16
-		global StackBuf
-StackBuf	equ STACK_TOP-44	; Base of stack if we use our own
+		export StackBuf:data
+StackBuf	equ STACK_TOP		; Base of stack if we use our own
 StackHome	equ StackBuf
 
 		; PXE loads the whole file, but assume it can't be more
@@ -93,7 +92,7 @@ _start:
 hcdhcp_magic	dd 0x2983c8ac		; Magic number
 hcdhcp_len	dd 7*4			; Size of this structure
 hcdhcp_flags	dd 0			; Reserved for the future
-		global bdhcp_len, adhcp_len
+		hidden bdhcp_len, adhcp_len
 		; Parameters to be parsed before the ones from PXE
 bdhcp_offset	dd 0			; Offset (entered by patcher)
 bdhcp_len	dd 0			; Length (entered by patcher)
@@ -211,7 +210,7 @@ ROOT_FS_OPS:
 		bits 32
 
 		section .savedata
-		global bdhcp_data, adhcp_data
+		hidden bdhcp_data, adhcp_data
 bdhcp_data:	resb MAX_DHCP_OPTS
 adhcp_data:	resb MAX_DHCP_OPTS
 
@@ -249,22 +248,12 @@ adhcp_copy:
 		bits 16
 
 ; As core/ui.inc used to be included here in core/pxelinux.asm, and it's no
-; longer used, its global variables that were previously used by
+; longer used, its hidden variables that were previously used by
 ; core/pxelinux.asm are now declared here.
 		section .bss16
 		alignb 4
 Kernel_EAX	resd 1
 Kernel_SI	resw 1
-
-		section .bss16
-		alignb 4
-ThisKbdTo	resd 1			; Temporary holder for KbdTimeout
-ThisTotalTo	resd 1			; Temporary holder for TotalTimeout
-KernelExtPtr	resw 1			; During search, final null pointer
-FuncFlag	resb 1			; Escape sequences received from keyboard
-KernelType	resb 1			; Kernel type, from vkernel, if known
-		global KernelName
-KernelName	resb FILENAME_MAX	; Mangled name for kernel
 
 		section .text16
 ;
@@ -273,7 +262,7 @@ KernelName	resb FILENAME_MAX	; Mangled name for kernel
 %include "com32.inc"
 
 		section .text16
-		global local_boot16:function hidden
+		hidden local_boot16:function
 local_boot16:
 		mov [LocalBootType],ax
 		lss sp,[InitStack]
@@ -299,7 +288,7 @@ local_boot16:
 ;
 ;         Note: use BIOS_timer here; we may not have jiffies set up.
 ;
-                global kaboom
+                hidden kaboom
 kaboom:
 		RESET_STACK_AND_SEGS AX
 .patch:		mov si,bailmsg
@@ -346,7 +335,7 @@ kaboom:
 ;
 ; While we're at it, save and restore all registers.
 ;
-                global pxenv
+                hidden pxenv
 pxenv:
 		pushfd
 		pushad
@@ -418,7 +407,7 @@ pxenv:
 		ret
 
 ; Must be after function def due to NASM bug
-                global PXEEntry
+                hidden PXEEntry
 PXEEntry	equ pxenv.jump+1
 
 ;
@@ -440,7 +429,7 @@ PXEStatus	resb 2
 ; Invoke INT 1Ah on the PXE stack.  This is used by the "Plan C" method
 ; for finding the PXE entry point.
 ;
-                global pxe_int1a
+                hidden pxe_int1a
 pxe_int1a:
 		mov [cs:PXEStack],sp
 		mov [cs:PXEStack+2],ss
@@ -456,7 +445,7 @@ pxe_int1a:
 ; gPXE to the ROM PXE stack.
 ;
 %if GPXE
-		global gpxe_unload
+		hidden gpxe_unload
 gpxe_unload:
 		mov bx,PXENV_FILE_EXIT_HOOK
 		mov di,pxe_file_exit_hook
@@ -545,24 +534,22 @@ pxe_file_exit_hook:
 ; -----------------------------------------------------------------------------
 
 		section .data16
-
-		global copyright_str, syslinux_banner
-copyright_str   db 'Copyright (C) 1994-'
-		asciidec YEAR
-		db ' H. Peter Anvin et al', CR, LF, 0
 err_bootfailed	db CR, LF, 'Boot failed: press a key to retry, or wait for reset...', CR, LF, 0
 bailmsg		equ err_bootfailed
 localboot_msg	db 'Booting from local disk...', CR, LF, 0
-syslinux_banner	db CR, LF, MY_NAME, ' ', VERSION_STR, ' ', MY_TYPE, ' '
-		db DATE_STR, ' ', 0
+pxebios_name	db 'PXE', 0
 
 ;
 ; Misc initialized (data) variables
 ;
-		section .data16
-                global KeepPXE
+		align 2, db 0
+		export BIOSName:data 2
+BIOSName	dw pxebios_name		; Dummy variable - always 0
+
+section .data16
+                hidden KeepPXE
 KeepPXE		db 0			; Should PXE be kept around?
 
 		section .bss16
-		global OrigFDCTabPtr
+		hidden OrigFDCTabPtr
 OrigFDCTabPtr	resd 1			; Keep bios_cleanup_hardware() honest

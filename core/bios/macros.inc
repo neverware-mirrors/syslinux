@@ -118,4 +118,48 @@ LF		equ 10		; Line Feed
 FF		equ 12		; Form Feed
 BS		equ  8		; Backspace
 
+;
+; Define hidden symbols as either hidden or exported (default or protected)
+;
+%ifdef NO_PLT
+  %define exported protected
+%else
+  %define exported default
+%endif
+
+%macro declare_global 2.nolist
+  %ifnidn __OUTPUT_FORMAT__, bin
+    %iftoken %1
+      global %1:data %2
+    %else
+      global %1 %2
+    %endif
+  %endif
+%endmacro
+
+%macro export 1-*.nolist
+  %rep %0
+    declare_global %1, exported
+    %rotate 1
+  %endrep
+%endmacro
+
+%macro hidden 1-*.nolist
+  %rep %0
+    declare_global %1, hidden
+    %rotate 1
+  %endrep
+%endmacro
+
+;
+; Most versions of NASM don't support setting the visibility on EQU'd
+; symbols, so tell NASM they are symbols in the absolute section
+; instead
+;
+%macro defabs 1.nolist
+    [absolute %1]
+%00:
+    __SECT__
+%endmacro
+
 %endif ; _MACROS_INC

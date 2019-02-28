@@ -411,4 +411,12 @@
 
 #define R_X86_64_NUM		38
 
+/* Types common to all ELF variants; proof that <inttypes.h> was overdue */
+typedef uint16_t Elf_Half;
+typedef int16_t  Elf_SHalf;
+typedef uint32_t Elf_Word;
+typedef int32_t  Elf_Sword;
+typedef uint64_t Elf_Xword;
+typedef int64_t  Elf_Sxword;
+
 #endif				/* _SYS_ELFCOMMON_H */

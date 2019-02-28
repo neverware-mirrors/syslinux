@@ -29,7 +29,6 @@
 ## Utility companion library for the COM32 library
 ##
 
-VPATH = $(SRC)
 include $(MAKEDIR)/elf.mk
 
 LIBOBJS	   = ansiline.o ansiraw.o keyname.o \
@@ -37,16 +36,12 @@ LIBOBJS	   = ansiline.o ansiraw.o keyname.o \
 	     md5.o crypt-md5.o sha256crypt.o sha512crypt.o base64.o \
 	     quicksort.o
 LNXLIBOBJS = $(patsubst %.o,%.lo,$(LIBOBJS))
+DEPLIBS    = $(LIBCOM32) $(LIBLDLINUX) $(LIBCORE)
 
-all: libutil.c32 libutil_lnx.a
+all: libutil.c32
 
 libutil.elf: $(LIBOBJS)
-	$(LD) $(LDFLAGS) -soname $(patsubst %.elf,%.c32,$(@F)) -o $@ $^
-
-libutil_lnx.a: $(LNXLIBOBJS)
-	rm -f $@
-	$(AR) cq $@ $(LNXLIBOBJS)
-	$(RANLIB) $@
+	$(LD) $(LDFLAGS) $(SHARED) -o $@ $(LIBOBJS) $(DEPLIBS)
 
 tidy dist:
 	rm -f *.o *.lo *.lst *.elf .*.d *.tmp
@@ -59,7 +54,5 @@ spotless: clean
 	rm -f *~ \#*
 
 install: all
-	mkdir -m 755 -p $(INSTALLROOT)$(COM32DIR)
-	install -m 644 libutil_lnx.a $(INSTALLROOT)$(COM32DIR)
 
 -include .*.d

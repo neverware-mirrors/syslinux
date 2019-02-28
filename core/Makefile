@@ -15,20 +15,12 @@
 # Makefile for the SYSLINUX core
 #
 
-VPATH = $(SRC)
-
-# No builtin rules
-MAKEFLAGS += -r
-MAKE      += -r
-
-include $(MAKEDIR)/embedded.mk
+include $(MAKEDIR)/elf.mk
 -include $(objdir)/version.mk
 
-OPTFLAGS =
-INCLUDES = -I$(SRC)/include -I$(com32)/include -I$(com32)/include/sys \
-	   -I$(com32)/lib \
-	   -I$(SRC)/bios/lwip/src/include \
-	   -I$(SRC)/bios/lwip/src/include/ipv4 -I$(SRC)/fs/pxe
+INCLUDE  += -I$(SRC)/include -I$(com32)/lib \
+	    -I$(SRC)/bios/lwip/src/include \
+	    -I$(SRC)/bios/lwip/src/include/ipv4 -I$(SRC)/fs/pxe
 
 # This is very similar to cp437; technically it's for Norway and Denmark,
 # but it's unlikely the characters that are different will be used in
@@ -38,6 +30,12 @@ CODEPAGE = cp865
 # The targets to build in this directory...
 BTARGET  = kwdhash.gen ldlinux.bss ldlinux.sys \
 	   isolinux.bin isolinux-debug.bin pxelinux.0 lpxelinux.0
+
+# The corresponding ELF files
+ETARGET  = $(patsubst $(SRC)/%-c.c,%.elf,$(wildcard $(SRC)/bios/*-c.c))
+
+# Export library files
+LIBCORE_FILES = libcore.so libcore.weak
 
 # All primary source files for the main syslinux files
 NASMSRC	 := $(sort $(shell find $(SRC) -name '*.asm' -print))
@@ -81,18 +79,18 @@ FILTER_OBJS = $(patsubst $(SRC)/%,%/%,$(FILTER_DIRS))
 COBJS	 = $(filter-out $(FILTER_OBJS),$(COBJ))
 SOBJS	 = $(filter-out $(FILTER_OBJS),$(SOBJ))
 
-LIB	 = bios/libsyslinux.a
-LIBS	 = $(LIB) --whole-archive $(objdir)/com32/lib/libcom32core.a
-LIBDEP   = $(filter-out -% %start%,$(LIBS))
-LIBOBJS	 = $(COBJS) $(SOBJS)
-
-NASMDEBUG = -g -F dwarf
-NASMOPT  += $(NASMDEBUG)
+CORE_LIB	= bios/libsyslinux.a
+CORE_LIBS	= $(CORE_LIB) $(objdir)/com32/lib/libcom32.a
+CORE_LIBOBJS	 = $(COBJS) $(SOBJS)
 
 PREPCORE = $(OBJ)/../lzo/prepcore
 
-CFLAGS += -D__SYSLINUX_CORE__ -D__FIRMWARE_$(FIRMWARE)__ \
-	  -I$(objdir) -DLDLINUX=\"$(LDLINUX)\"
+# This makes the core quite a bit smaller, but requires that the proper
+# __export tags are in place. It would be very good to add the same things
+# to the libraries, especially libcom32, for the same reason.
+CFLAGS += -fvisibility=hidden
+
+CFLAGS += -D__SYSLINUX_CORE__ -I$(objdir)
 
 # The DATE is set on the make command line when building binaries for
 # official release.  Otherwise, substitute a hex string that is pretty much
@@ -105,9 +103,9 @@ DATE    := $(shell sh $(SRC)/../gen-id.sh $(VERSION) $(HEXDATE))
 endif
 
 ifeq ($(FWCLASS),EFI)
-all: makeoutputdirs $(filter-out %bios.o,$(COBJS) $(SOBJS)) codepage.o
+all: makeoutputdirs $(COBJS) $(SOBJS) codepage.o $(LIBCORE_FILES)
 else
-all: makeoutputdirs $(BTARGET)
+all: makeoutputdirs $(BTARGET) $(LIBCORE_FILES)
 endif
 
 makeoutputdirs:
@@ -118,33 +116,29 @@ kwdhash.gen: keywords genhash.pl
 
 ifeq ($(FWCLASS),BIOS)
 
-.PRECIOUS: %.elf
 %.raw: %.elf
-	$(OBJCOPY) -O binary -S $< $(@:.bin=.raw)
+	$(OBJCOPY) -O binary -S $< $@
 
-# GNU make 3.82 gets confused by plain %.raw; make 4.0 requires it
-.PRECIOUS: $(OBJ)/%.raw %.raw
 %.bin: %.raw $(PREPCORE)
 	$(PREPCORE) $< $@
 
-%.o: %.asm kwdhash.gen $(OBJ)/../version.gen
-	$(NASM) -f $(NASM_ELF) $(NASMOPT) -DDATE_STR="'$(DATE)'" \
-		-DHEXDATE="$(HEXDATE)" \
-		-D$(ARCH) \
-		-I$(SRC)/ -I$(SRC)/bios/ \
-		-l $(@:.o=.lsr) -o $@ -MP -MD $(@D)/.$(@F).d $<
+NASMFLAGS += -DDATE_STR="'$(DATE)'" -DHEXDATE="$(HEXDATE)" -I$(SRC)/bios/ -I$(objdir)/ -I$(OBJ)/
+
+%.o: %.asm kwdhash.gen $(objdir)/version.gen
 
 AUXLIBS = bios/libpxelinux.a bios/liblpxelinux.a
-LDSCRIPT = $(SRC)/bios/syslinux.ld
+CORELDSCRIPT = $(SRC)/bios/syslinux.ld
+CORELDFLAGS = $(MAIN_LDFLAGS) -pie --no-dynamic-linker \
+	--unresolved-symbols=report-all \
+	-E -M -T $(CORELDSCRIPT)
 
-NASM_ELF = elf
+# Assembly file to force certain symbols to be exported even if
+# they are not used by the core.
+EXPORT = bios/export.o
 
-%.elf: %.o %-c.o lib%.a $(LIBDEP) $(LDSCRIPT)
-	$(LD) $(LDFLAGS) -pie -Bsymbolic \
-		-T $(LDSCRIPT) \
-		--unresolved-symbols=report-all \
-		-E --hash-style=gnu -M -o $@ $< $*-c.o \
-		--start-group $(*D)/lib$(*F).a $(LIBS) --end-group \
+$(ETARGET): %.elf: %.o %-c.o $(EXPORT) %.a $(CORE_LIBS) $(CORELDSCRIPT)
+	$(LD) $(CORELDFLAGS) -o $@ $< $*-c.o $(EXPORT) \
+		--start-group $*.a $(CORE_LIBS) --end-group \
 		> $*.map
 	if [ `$(NM) -D -u $@ | wc -l` -ne 0 ]; then \
 		$(NM) -D -u $@ 1>&2; rm -f $@; false; fi
@@ -152,14 +146,14 @@ NASM_ELF = elf
 	$(PERL) $(SRC)/lstadjust.pl $*.lsr $*.sec $*.lst
 
 # Legacy network stack
-bios/libpxelinux.a: $(CORE_PXE_OBJS) $(PXELINUX_OBJS)
+bios/pxelinux.a: $(CORE_PXE_OBJS) $(PXELINUX_OBJS)
 
 # LwIP network stack
-bios/liblpxelinux.a: $(CORE_PXE_OBJS) $(LPXELINUX_OBJS)
+bios/lpxelinux.a: $(CORE_PXE_OBJS) $(LPXELINUX_OBJS)
 
 # Otherwise, no special library needed, a null library will be created
 
-bios/lib%.a:
+bios/%.a:
 	rm -f $@
 	$(AR) cq $@ $^
 	$(RANLIB) $@
@@ -176,9 +170,19 @@ ldlinux.bss: bios/ldlinux.bin
 ldlinux.sys: bios/ldlinux.bin
 	dd if=$< of=$@ bs=512 skip=2
 
+libcore.S: $(ETARGET) $(SRC)/export.pl
+	$(PERL) '$(SRC)/export.pl' libcore.S libcore.weak $(ETARGET)
+
+libcore.weak: libcore.S
+	: $@ generated by side effect from $<
+
+# Don't use $(SHARED) here: we don't want a SONAME on libcore.so
+libcore.so: libcore.o
+	$(LD) $(LDFLAGS) -shared -o $@ $<
+
 endif # BIOS
 
-$(LIB): $(LIBOBJS)
+$(CORE_LIB): $(CORE_LIBOBJS)
 	rm -f $@
 	$(AR) cq $@ $^
 	$(RANLIB) $@

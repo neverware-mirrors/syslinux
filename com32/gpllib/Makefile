@@ -3,7 +3,7 @@
 #
 
 # Include configuration rules
-include $(MAKEDIR)/lib.mk
+include $(MAKEDIR)/elf.mk
 
 REQFLAGS += -I$(SRC)/../gplinclude -I$(SRC)/../gplinclude/zzjson
 
@@ -17,14 +17,17 @@ AUXDIR   = $(DATADIR)/syslinux
 INCDIR   = /usr/include
 COM32DIR = $(AUXDIR)/com32
 
+LIBS     = $(LIBCOM32) $(LIBLDLINUX) $(LIBCORE)
+
 all: makeoutputdirs libgpl.c32
 
+.PHONY: makeoutputdirs
 makeoutputdirs:
-	@mkdir -p $(foreach b, \
-		$(addprefix $(OBJ),$(sort $(dir $(LIBOBJS)))),$(b))
+	mkdir -p $(foreach b, \
+		$(addprefix $(OBJ)/,$(sort $(dir $(LIBOBJS)))),$(b))
 
-libgpl.elf : $(LIBOBJS)
-	$(LD) -shared $(LDFLAGS) -soname $(patsubst %.elf,%.c32,$(@F)) -o $@ $^
+libgpl.elf: $(LIBOBJS) $(LIBS)
+	$(LD) $(LDFLAGS) $(SHARED) -o $@ $(LIBOBJS) --no-whole-archive $(LIBS)
 
 tidy dist clean:
 	find . \( -name \*.o -o -name .\*.d -o -name \*.tmp \) -print0 | \

@@ -42,15 +42,6 @@
 extern ssize_t __file_read(struct file_info *, void *, size_t);
 extern int __file_close(struct file_info *);
 
-const struct input_dev __file_dev = {
-    .dev_magic = __DEV_MAGIC,
-    .flags = __DEV_FILE | __DEV_INPUT,
-    .fileflags = O_RDONLY,
-    .read = __file_read,
-    .close = __file_close,
-    .open = NULL,
-};
-
 int open(const char *pathname, int flags, ...)
 {
     int fd, handle;

@@ -41,7 +41,7 @@ MIN_SECTOR_SIZE		equ (1 << MIN_SECTOR_SHIFT)
 ; Memory below this point is reserved for the BIOS and the MBR
 ;
 		section .earlybss
-		global trackbuf:data hidden
+		hidden trackbuf:data
 trackbufsize	equ 8192
 trackbuf	resb trackbufsize	; Track buffer goes here
 		; ends at 2800h
@@ -70,16 +70,6 @@ trackbuf	resb trackbufsize	; Track buffer goes here
 enter_command:
 auto_boot:
 		jmp kaboom
-
-		section .bss16
-		alignb 4
-ThisKbdTo	resd 1			; Temporary holder for KbdTimeout
-ThisTotalTo	resd 1			; Temporary holder for TotalTimeout
-KernelExtPtr	resw 1			; During search, final null pointer
-FuncFlag	resb 1			; Escape sequences received from keyboard
-KernelType	resb 1			; Kernel type, from vkernel, if known
-		global KernelName
-KernelName	resb FILENAME_MAX	; Mangled name for kernel
 
 		section .text16
 ;
@@ -121,10 +111,6 @@ kaboom2:
 ; -----------------------------------------------------------------------------
 
 		section .data16
-		global copyright_str
-copyright_str   db ' Copyright (C) 1994-'
-		asciidec YEAR
-		db ' H. Peter Anvin et al', CR, LF, 0
 err_bootfailed	db CR, LF, 'Boot failed: please change disks and press '
 		db 'a key to continue.', CR, LF, 0
 

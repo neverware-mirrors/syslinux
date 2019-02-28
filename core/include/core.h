@@ -24,8 +24,10 @@ extern char ConfigName[];
 extern char config_cwd[];
 extern char cmd_line[];
 extern char ConfigFile[];
-extern char syslinux_banner[];
-extern char copyright_str[];
+extern const uint16_t __syslinux_core_version;
+extern const char syslinux_banner[];
+extern const char copyright_str[];
+extern char StackBuf[];
 
 extern const size_t __syslinux_shuffler_size;
 
@@ -34,16 +36,22 @@ static inline size_t syslinux_shuffler_size(void)
     return __syslinux_shuffler_size;
 }
 
-/*
- * Mark symbols that are only used by BIOS as __weak until we can move
- * all references out of the generic (EFI + BIOS) code and into
- * BIOS-specific code.
- */
-extern __weak uint16_t BIOSName;
-extern __weak char KernelName[];
-extern __weak char StackBuf[];
+#ifdef __FIRMWARE_BIOS__
+static inline const char *bios_name(void)
+{
+    extern const uint16_t BIOSName;
+    return BIOSName ? (const char *)(size_t)BIOSName : "";
+}
+#else
+static inline const char *bios_name(void)
+{
+    return "";
+}
+#endif
 
 extern uint8_t KbdMap[256];
+
+extern size_t HighMemSize;
 
 extern const uint16_t IPAppends[];
 extern size_t numIPAppends;
@@ -92,10 +100,6 @@ extern const char *sysappend_strings[SYSAPPEND_MAX];
 extern uint32_t SysAppends;
 extern void sysappend_set_uuid(const uint8_t *uuid);
 extern void sysappend_set_fs_uuid(void);
-
-void __cdecl core_intcall(uint8_t, const com32sys_t *, com32sys_t *);
-void __cdecl core_farcall(uint32_t, const com32sys_t *, com32sys_t *);
-int __cdecl core_cfarcall(uint32_t, const void *, uint32_t);
 
 extern const com32sys_t zero_regs;
 void call16(void (*)(void), const com32sys_t *, com32sys_t *);

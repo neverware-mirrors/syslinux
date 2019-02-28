@@ -421,12 +421,7 @@ const char *edit_cmdline(const char *input, int top /*, int width */ ,
 		break;
 	    }
 	case KEY_CTRL('V'):
-	    if (BIOSName)
-		printf("%s%s%s", syslinux_banner,
-		       (char *)MK_PTR(0, BIOSName), copyright_str);
-	    else
-		printf("%s%s", syslinux_banner, copyright_str);
-
+	    printf("%s%s%s", syslinux_banner, bios_name(), copyright_str);
 	    redraw = 1;
 	    break;
 

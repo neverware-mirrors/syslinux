@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
         ZZJSON *tmp2;
 
         tmp = zzjson_create_array(&config,
-                zzjson_create_number_d(&config, 3.14),
+		/* zzjson_create_number_d(&config, 3.14), */
                 zzjson_create_number_i(&config, 1234LL),
                 zzjson_create_number_i(&config, -4321LL),
                 zzjson_create_true(&config),

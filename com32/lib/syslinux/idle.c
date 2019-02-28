@@ -37,9 +37,17 @@
 #include <syslinux/pmapi.h>
 #include <syslinux/idle.h>
 
+void __weak reset_idle(void)
+{
+}
+
 void syslinux_reset_idle(void)
 {
     reset_idle();
+}
+
+void __weak __idle(void)
+{
 }
 
 void syslinux_idle(void)

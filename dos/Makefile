@@ -72,8 +72,8 @@ syslinux.com: syslinux.elf
 		true
 
 %.com: %.asm
-	$(NASM) $(NASMOPT) -f bin -o $@ -MP -MD .$@.d -l $*.lst $<
+	$(NASM) $(NASMFLAGS) -f bin -o $@ -MP -MD .$@.d -l $*.lst $<
 
-ldlinux.o: ldlinux.S $(OBJ)/../core/ldlinux.sys
+ldlinux.o: ldlinux.S $(objdir)/core/ldlinux.sys $(objdir)/ldlinux/ldlinux.c32
 
 -include .*.d

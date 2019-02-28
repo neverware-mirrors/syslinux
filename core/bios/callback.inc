@@ -37,26 +37,28 @@
 ; - Return segment (== real mode cs == 0)
 ; - Return flags
 ;
-		global core_farcall:function hidden
-core_farcall:
-		mov eax,[esp+1*4]		; CS:IP
-		jmp core_syscall
-
-		global core_intcall:function hidden
-core_intcall:
-		movzx eax,byte [esp+1*4]	; INT number
+		export __intcall:function
+__intcall:
+		movzx eax,al			; INT number
 		mov eax,[eax*4]			; Get CS:IP from low memory
+		; Fall through
 
-core_syscall:
+		export ___farcall:function
+		; eax = CS:IP
+		; edx = source register structure
+		; ecx = destination register structure
+___farcall:
 		pushfd				; Save IF among other things...
 		inc dword [CallbackCtr]
 		push ebx
 		push ebp
 		push esi
 		push edi
+		push ecx			; Return register structure
 		push dword [CallbackSP]
 
 		cld
+		mov esi,edx			; Source register structure
 
 		movzx edi,word [word RealModeSSSP]
 		movzx ebx,word [word RealModeSSSP+2]
@@ -65,7 +67,6 @@ core_syscall:
 		shl ebx,4
 		add edi,ebx		; Create linear address
 
-		mov esi,[esp+8*4]	; Source regs
 		xor ecx,ecx
 		mov cl,11		; 44 bytes to copy
 		rep movsd
@@ -80,7 +81,7 @@ core_syscall:
 		stosw			; Return flags
 
 		mov bx,.rm
-		jmp enter_rm	; Go to real mode
+		jmp enter_rm		; Go to real mode
 
 		bits 16
 		section .text16
@@ -94,7 +95,7 @@ core_syscall:
 		pop ds
 		popad
 		popfd
-		retf				; Invoke routine
+		retf			; Invoke routine
 
 .rm_return:
 		; We clean up SP here because we don't know if the
@@ -117,17 +118,16 @@ core_syscall:
 .pm_return:
 		movzx esi,word [word RealModeSSSP]
 		movzx eax,word [word RealModeSSSP+2]
-		mov edi,[esp+9*4]	; Dest regs
+		pop edi			; Destination register structure
 		shl eax,4
 		add esi,eax		; Create linear address
 		and edi,edi		; NULL pointer?
-		jnz .do_copy
-.no_copy:	mov edi,esi		; Do a dummy copy-to-self
+		jz .no_copy
 .do_copy:	xor ecx,ecx
 		mov cl,11		; 44 bytes
 		rep movsd		; Copy register block
 
-		add dword [word RealModeSSSP],54
+.no_copy:	add dword [word RealModeSSSP],54
 					; Remove from stack
 
 		pop dword [CallbackSP]
@@ -147,8 +147,11 @@ core_syscall:
 ; followed by the return CS:IP and the CS:IP of the target function.
 ; The value of IF is copied from the calling routine.
 ;
-		global core_cfarcall:function hidden
-core_cfarcall:
+		export ___cfarcall:function
+		; eax = CS:IP
+		; edx = data to be put on stack
+		; ecx = size of data to be put on stack
+___cfarcall:
 		pushfd				; Save IF among other things...
 		inc dword [CallbackCtr]
 		push ebx
@@ -158,32 +161,27 @@ core_cfarcall:
 		push dword [CallbackSP]
 
 		cld
-		mov ecx,[esp+9*4]		; Size of stack frame
+		mov esi,edx
 
 		movzx edi,word [word RealModeSSSP]
-		movzx ebx,word [word RealModeSSSP+2]
 		mov [word CallbackSP],di
 		sub edi,ecx		; Allocate space for stack frame
 		and edi,~3		; Round
 		sub edi,4*3		; Return pointer, return value, EFLAGS
 		mov [word RealModeSSSP],di
+		movzx ebx,word [word RealModeSSSP+2]
 		shl ebx,4
-		add edi,ebx		; Create linear address
+		lea edi,[ebx+edi+12]	; Linear address of the arguments
 
+		mov [edi-8],eax		; CS:IP
+		mov dword [edi-4],.rm_return	; Return seg:off
 		mov eax,[esp+5*4]	; EFLAGS from entry
 		and eax,0x202		; IF only
-		stosd
-		mov eax,[esp+7*4]	; CS:IP
-		stosd			; Save to stack frame
-		mov eax,.rm_return	; Return seg:off
-		stosd
-		mov esi,[esp+8*4]	; Stack frame
-		mov eax,ecx		; Copy the stack frame
+		mov [edi-12],eax	; Real mode EFLAGS
+
+		add ecx,3		; Copy the stack frame
 		shr ecx,2
 		rep movsd
-		mov ecx,eax
-		and ecx,3
-		rep movsb
 
 		mov bx,.rm
 		jmp enter_rm
@@ -218,7 +216,7 @@ core_cfarcall:
 
 		section .bss16
 		alignb 4
-		global core_pm_hook
+		hidden core_pm_hook
 CallbackSP	resd 1			; SP saved during callback
 CallbackCtr	resd 1
 

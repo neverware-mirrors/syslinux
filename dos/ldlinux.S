@@ -12,7 +12,7 @@ syslinux_ldlinux_size	= . - syslinux_ldlinux
 	.size	syslinux_ldlinux, .-syslinux_ldlinux
 	.globl	syslinux_ldlinuxc32, syslinux_ldlinuxc32_size
 syslinux_ldlinuxc32:
-	.incbin "../com32/elflink/ldlinux/ldlinux.c32"
+	.incbin "../ldlinux/ldlinux.c32"
 	.space ((syslinux_ldlinuxc32 - .) & 511)
 syslinux_ldlinuxc32_size = . - syslinux_ldlinuxc32
 	.size	syslinux_ldlinuxc32, .-syslinux_ldlinuxc32

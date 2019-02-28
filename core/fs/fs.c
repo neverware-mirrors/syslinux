@@ -117,7 +117,7 @@ __export void mangle_name(char *dst, const char *src)
     this_fs->fs_ops->mangle_name(dst, src);
 }
 
-size_t pmapi_read_file(uint16_t *handle, void *buf, size_t sectors)
+__export size_t pmapi_read_file(uint16_t *handle, void *buf, size_t sectors)
 {
     bool have_more;
     size_t bytes_read;

@@ -210,7 +210,7 @@ pm_bcopy:
 ; do_raw_shuffle_and_boot is the same entry point, but with a C ABI:
 ; do_raw_shuffle_and_boot(safearea, descriptors, bytecount)
 ;
-		global do_raw_shuffle_and_boot
+		export do_raw_shuffle_and_boot:function
 do_raw_shuffle_and_boot:
 		mov edi,eax
 		mov esi,edx
@@ -325,9 +325,9 @@ RM_IDT_ptr:	dw 0FFFFh		; Length (nonsense, but matches CPU)
 bcopyxx_stack	equ 128			; We want this much stack
 
 		section .rodata
-		global __syslinux_shuffler_size
 		extern __bcopyxx_len
 		align 4
+		export __syslinux_shuffler_size:data 4
 __syslinux_shuffler_size:
 		dd __bcopyxx_len
 

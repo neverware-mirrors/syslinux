@@ -1,5 +1,6 @@
 	.globl	__switch_to
 	.type	__switch_to, @function
+	.hidden	__switch_to
 __switch_to:
 	movl	__current, %edx
 	pushl	%ebx
@@ -23,6 +24,7 @@ __switch_to:
 
 	.globl	__start_thread
 	.type	__start_thread, @function
+	.hidden	__start_thread
 __start_thread:
 	movl	%edi, %eax		/* Thread function argument */
 

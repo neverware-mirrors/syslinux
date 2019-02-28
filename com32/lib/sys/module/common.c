@@ -57,7 +57,7 @@ void print_elf_symbols(struct elf_module *module) {
 }
 #endif //ELF_DEBUG
 
-FILE *findpath(char *name)
+FILE *findpath(const char *name)
 {
 	struct path_entry *entry;
 	char path[FILENAME_MAX];

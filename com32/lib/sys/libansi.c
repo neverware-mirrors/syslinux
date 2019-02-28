@@ -116,6 +116,11 @@ void clear_entire_screen(void)
 	fputs(CSI "2J", stdout);
 }
 
+void gotoxy(int row, int col)
+{
+	printf(CSI "%d;%dH", row + 1, col + 1);
+}
+
 /**
  * cprint_vga2ansi - given a VGA attribute, print a character
  * @chr:	character to print
@@ -126,7 +131,7 @@ void clear_entire_screen(void)
  * For performance, SGR parameters are cached. To reset them,
  * call cprint_vga2ansi('0', '0').
  **/
-static void cprint_vga2ansi(const char chr, const char attr)
+static void cprint_vga2ansi(char chr, unsigned char attr)
 {
 	static const char ansi_char[8] = "04261537";
 	static uint16_t last_attr = 0x300;
@@ -209,7 +214,7 @@ void reset_colors(void)
  *
  * Note: @attr is a VGA attribute.
  **/
-void cprint(const char chr, const char attr, unsigned int times)
+void cprint(char chr, unsigned char attr, unsigned int times)
 {
 	while (times--)
 		cprint_vga2ansi(chr, attr);
@@ -220,7 +225,7 @@ void cprint(const char chr, const char attr, unsigned int times)
  * @str:	string to print
  * @attr:	VGA attribute
  **/
-void csprint(const char *str, const char attr)
+void csprint(const char *str, unsigned char attr)
 {
 	while (*str) {
 		cprint(*str, attr, 1);
@@ -234,10 +239,10 @@ void csprint(const char *str, const char attr)
  * @fillchar:			character to use to fill the region
  * @fillattr:			character attribute (VGA)
  **/
-void clearwindow(const char top, const char left, const char bot,
-		 const char right, const char fillchar, const char fillattr)
+void clearwindow(int top, int left, int bot,
+		 int right, char fillchar, unsigned char fillattr)
 {
-	char x;
+	int x;
 	for (x = top; x < bot + 1; x++) {
 		gotoxy(x, left);
 		cprint(fillchar, fillattr, right - left + 1);

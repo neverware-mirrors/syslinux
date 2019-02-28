@@ -26,9 +26,9 @@ int scan_highmem_area(void *data, addr_t start, addr_t len,
 			     || type != SMT_FREE)
 		return 0;
 
-	if (start < __com32.cs_memsize) {
-		len -= __com32.cs_memsize - start;
-		start = __com32.cs_memsize;
+	if (start < HighMemSize) {
+		len -= HighMemSize - start;
+		start = HighMemSize;
 	}
 	if (len > E820_MEM_MAX - start)
 		len = E820_MEM_MAX - start;
@@ -44,7 +44,7 @@ int scan_highmem_area(void *data, addr_t start, addr_t len,
 		__inject_free_block(fp);
 	}
 
-	__com32.cs_memsize = start + len; /* update the HighMemSize */
+	HighMemSize = start + len; /* update the HighMemSize */
 	return 0;
 }
 
@@ -99,6 +99,6 @@ void mem_init(void)
 	__inject_free_block(fp);
 
 	/* Initialize the main heap */
-	__com32.cs_memsize = (size_t)free_high_memory;
+	HighMemSize = (size_t)free_high_memory;
 	syslinux_scan_memory(scan_highmem_area, NULL);
 }

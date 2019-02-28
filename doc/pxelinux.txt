@@ -121,7 +121,6 @@ option (RFC 1784/RFC 2349).  The "tftp-hpa" TFTP server, which support
 options, is available at:
 
 	http://www.kernel.org/pub/software/network/tftp/
-	ftp://www.kernel.org/pub/software/network/tftp/
 
 ... and on any kernel.org mirror (see http://www.kernel.org/mirrors/).
 

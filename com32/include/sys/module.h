@@ -7,20 +7,21 @@
 #ifndef MODULE_H_
 #define MODULE_H_
 
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <elf.h>
-#include <stdint.h>
+#include <elfutils.h>
 #include <setjmp.h>
-#include <stdbool.h>
 #include <linux/list.h>
 
-#if __SIZEOF_POINTER__ == 4
-#include "module32.h"
-#elif __SIZEOF_POINTER__ == 8
-#include "module64.h"
-#else
-#error "unsupported architecture"
-#endif
+#define MODULE_ELF_CLASS		ELF_CLASS
+#define MODULE_ELF_CLASS_SIZE		ELF_CLASS_SIZE
+#define MODULE_ELF_DATA			ELF_DATA
+#define MODULE_ELF_VERSION		ELF_VERSION
+#define MODULE_ELF_MACHINE		ELF_MACHINE
+#define MODULE_ELF_TYPE			ET_DYN
 
 /*
  * The maximum length of the module file name (including path), stored
@@ -35,6 +36,20 @@
 #define LIB_MODULE			1
 
 #define MAX_NR_DEPS			64
+
+/**
+ * elf_malloc - Allocates memory to be used by ELF module contents.
+ * @memptr: pointer to a variable to hold the address of the allocated block.
+ * @alignment: alignment constraints of the block
+ * @size: the required size of the block
+ */
+extern int elf_malloc(void **memptr, size_t alignment, size_t size);
+
+/**
+ * elf_free - Releases memory previously allocated by elf_malloc.
+ * @memptr: the address of the allocated block
+ */
+extern void elf_free(void *memptr);
 
 /*
  * Initialization and finalization function signatures
@@ -153,7 +168,7 @@ struct module_dep {
  */
 extern struct elf_module *unload_modules_since(const char *name);
 
-extern FILE *findpath(char *name);
+extern FILE *findpath(const char *name);
 
 
 /**

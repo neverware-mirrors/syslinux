@@ -20,9 +20,6 @@
 		; Default to 16-bit code
 		bits 16
 
-; Memory below 0800h is reserved for the BIOS and the MBR.
-BSS_START	equ 0800h
-
 ; Text starts at the load address of 07C00h.
 TEXT_START	equ 7C00h
 
@@ -34,20 +31,15 @@ TEXT_START	equ 7C00h
 ; handle localboot properly), so avoid that immediate memory region.
 ; The range that is known to be bad is approximately 75E8..7C00; the
 ; lower bound is tight.
-; 
-		global STACK_LEN, STACK_TOP, STACK_BASE
+;
 STACK_LEN	equ 4096
 %if IS_PXELINUX
-STACK_TOP	equ 7000h
+_STACK_TOP	equ 7000h
 %else
-STACK_TOP	equ 7c00h
+_STACK_TOP	equ 7c00h
 %endif
-STACK_BASE	equ STACK_TOP - STACK_LEN
-
-; The secondary BSS section, above the text; we really wish we could
-; just make it follow .bcopy32 or hang off the end,
-; but it doesn't seem to work that way.
-LATEBSS_START	equ 0B800h
+		global _STACK_BASE
+_STACK_BASE	equ STACK_TOP - STACK_LEN
 
 ;
 ; 32-bit stack layout
@@ -66,6 +58,10 @@ STACK32_LEN	equ 64*1024
 		section .replacestub	exec write progbits align=16
 		section .gentextnr	exec write nobits align=16
 		section .stack16	write nobits align=16
+		hidden STACK_BASE, STACK_TOP
+STACK_BASE:
+		resb STACK_LEN
+STACK_TOP:
 
 		; Use .bss16 for things that doesn't have to be in low memory;
 		; .earlybss should be used for things that absolutely have
@@ -119,7 +115,7 @@ RBFG_brainfuck:	resb 2048		; Bigger than an Ethernet packet...
 
 		extern free_high_memory
 
-		global _start
+		hidden _start
 
 		section .text16
 
@@ -137,7 +133,7 @@ serial_buf_size	equ 4096		; Should be a power of 2
 ;
 		extern	xfer_buf_seg
 		section .xfer_buf	write nobits align=65536
-		global	core_xfer_buf:data hidden
+		hidden	core_xfer_buf:data
 core_xfer_buf	resb 65536
 
 ;
