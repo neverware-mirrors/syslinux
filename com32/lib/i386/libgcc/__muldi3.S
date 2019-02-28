@@ -11,15 +11,13 @@
 __muldi3:
 	/* i386 */
 	push  %esi
-	movl  8(%esp),%ecx
-	movl  %eax,%esi
-	push  %edx
-	mull  %ecx
-	imull 12(%esp),%esi
-	addl  %esi,%edx
+	movl   8(%esp),%esi
+	movl  12(%esp),%ecx
+	imul  %esi,%edx
+	imul  %eax,%ecx
+	add   %edx,%ecx
+	mul   %esi
 	pop   %esi
-	imull %esi,%ecx
-	addl  %ecx,%edx
-	pop   %esi
+	add   %ecx,%edx
 	ret
 	.size __muldi3,.-__muldi3
