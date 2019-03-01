@@ -14,7 +14,7 @@
  * point. Once the Syslinux ELF shared object has control we can do
  * whatever we want.
  */
-#include <linux/elf.h>
+#include <elf.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -22,17 +22,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "wrapper.h"
-
-#if __SIZEOF_POINTER__ == 4
-typedef Elf32_Ehdr Elf_Ehdr;
-typedef Elf32_Addr Elf_Addr;
-#elif __SIZEOF_POINTER__ == 8
-typedef Elf64_Ehdr Elf_Ehdr;
-typedef Elf64_Addr Elf_Addr;
-#else
-#error "unsupported architecture"
-#endif
+#include "prepcore.h"
 
 /*
  * 'so_memsz' is the size of the ELF shared object once loaded.
@@ -163,10 +153,10 @@ int main(int argc, char **argv)
 {
 	Elf32_Ehdr e32_hdr;
 	Elf64_Ehdr e64_hdr;
-	__uint32_t entry;
-	__uint8_t class;
-	__uint64_t phoff = 0;
-	__uint16_t phnum = 0, phentsize = 0;
+	uint32_t entry;
+	uint8_t class;
+	uint64_t phoff = 0;
+	uint16_t phnum = 0, phentsize = 0;
 	unsigned char *id;
 	FILE *f_in, *f_out;
 	void *buf;

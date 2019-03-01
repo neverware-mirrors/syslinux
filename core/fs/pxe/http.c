@@ -1,6 +1,6 @@
 #include <syslinux/sysappend.h>
 #include <ctype.h>
-#include <lwip/api.h>
+#include <limits.h>
 #include "core_pxe.h"
 #include "version.h"
 #include "url.h"

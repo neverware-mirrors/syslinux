@@ -16,18 +16,22 @@
 ##
 include $(MAKEDIR)/syslinux.mk
 
-OPTFLAGS   = -g -Os
-INCLUDES   =
-CFLAGS     = $(WARNFLAGS) -D_FILE_OFFSET_BITS=64 \
-             $(OPTFLAGS) $(INCLUDES)
-LDFLAGS    =
-LIBS	   =
+OPTFLAGS   = -g -O2
+INCLUDES   = -I$(SRC)/include
+CFLAGS_FOR_BUILD ?= $(WARNFLAGS) -D_FILE_OFFSET_BITS=64  $(OPTFLAGS)
+CFLAGS_FOR_BUILD += $(INCLUDES)
+LDFLAGS_FOR_BUILD =
+LIBS_FOR_BUILD   =
 
 .SUFFIXES: .c .o .S .s .i .elf .com .bin .asm .lst .c32 .lss
 
 %.o: %.c
-	$(CC) $(UMAKEDEPS) $(CFLAGS) -c -o $@ $<
+	$(CC_FOR_BUILD) $(UMAKEDEPS) $(CFLAGS_FOR_BUILD) -c -o $@ $<
 %.i: %.c
-	$(CC) $(UMAKEDEPS) $(CFLAGS) -E -o $@ $<
+	$(CC_FOR_BUILD) $(UMAKEDEPS) $(CFLAGS_FOR_BUILD) -E -o $@ $<
 %.s: %.c
-	$(CC) $(UMAKEDEPS) $(CFLAGS) -S -o $@ $<
+	$(CC_FOR_BUILD) $(UMAKEDEPS) $(CFLAGS_FOR_BUILD) -S -o $@ $<
+%: %.o
+	$(CC_FOR_BUILD) $(UMAKEDEPS) $(CFLAGS_FOR_BUILD) \
+		$(LDFLAGS_FOR_BUILD) -o $@ $^ $(LIBS_FOR_BUILD)
+

@@ -13,9 +13,8 @@
 VPATH = $(SRC)
 include $(MAKEDIR)/build.mk
 
-INCLUDES += -I$(SRC)/include
-
-LIBOBJS = $(patsubst %.c,%.o,$(subst $(SRC)/,,$(sort $(wildcard $(SRC)/src/*.c))))
+LIBSRCS = $(sort $(wildcard $(SRC)/src/*.c))
+LIBOBJS = $(LIBSRCS:$(SRC)/%.c=%.o)
 LIB     = lzo.a
 BINS    = prepcore
 
@@ -29,8 +28,7 @@ $(LIB) : $(LIBOBJS)
 	$(AR) cq $@ $^
 	$(RANLIB) $@
 
-prepcore : prepcore.o $(LIB)
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+prepcore: prepcore.o $(LIB)
 
 tidy dist clean spotless:
 	rm -f $(BINS)

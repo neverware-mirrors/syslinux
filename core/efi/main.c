@@ -17,11 +17,10 @@
 #include "efi_pxe.h"
 
 __export uint16_t PXERetry;
-__export char copyright_str[] = "Copyright (C) 2011-" YEAR_STR "\n";
+__export const char copyright_str[] = "Copyright (C) 2011-" YEAR_STR "\n";
 uint8_t SerialNotice = 1;
-__export char syslinux_banner[] = "Syslinux " VERSION_STR " (EFI; " DATE_STR ")\n";
+__export const char syslinux_banner[] = "Syslinux " VERSION_STR " (EFI; " DATE_STR ")\n";
 char CurrentDirName[CURRENTDIR_MAX];
-struct com32_sys_args __com32;
 
 uint32_t _IdleTimer = 0;
 char __lowmem_heap[32];
@@ -1280,7 +1279,7 @@ extern char __bss_end[];
 
 static void efi_setcwd(CHAR16 *dp)
 {
-	CHAR16 *c16;
+	const CHAR16 *c16;
 	char *c8;
 	int i, j;
 
