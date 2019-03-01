@@ -38,8 +38,6 @@ LPXELINUX_OBJS  := $(filter $(LPXELINUX_DIRS:%=%/%.o),$(ALLOBJ))
 PXELINUX_OBJS   := $(filter $(PXELINUX_DIRS:%=%/%.o),$(ALLOBJ))
 MAIN_OBJS       := $(filter $(MAIN_DIRS:%=%/%.o),$(ALLOBJ))
 
-CORE_LIBOBJS    := $(filter-out $(FILTER_DIRS:%=%/%.o),$(ALLOBJ))
-
 AUXLIBS      	:= bios/pxelinux.a bios/lpxelinux.a
 CORELDSCRIPT	:= $(SRC)/bios/syslinux.ld
 

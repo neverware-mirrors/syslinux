@@ -39,7 +39,10 @@ PREPCORE  = $(objdir)/prepcore/$(fwclass)/prepcore
 
 # All primary source files for the main syslinux files
 SRCFILES  := $(sort $(shell find $(SRCDIRS:%=$(SRC)/%) \
-	      -name tests -prune -o -type f -print))
+	        -name tests   -type d -prune -o \
+		-name $(ARCH) -type d -true  -o \
+		-regex '.*/arch/[^/]+' -type d -prune -o \
+		-type f -print))
 NASMSRC	  := $(filter %.asm,$(SRCFILES))
 NASMHDR	  := $(filter %.inc,$(SRCFILES))
 CSRC	  := $(filter %.c  ,$(SRCFILES))
@@ -81,6 +84,7 @@ DATE    := $(shell sh $(SRC)/../gen-id.sh $(VERSION) $(HEXDATE))
 endif
 
 CORELDSCRIPT ?= $(SRC)/$(fwclass)/syslinux.ld
+CORE_LIBOBJS := $(filter-out $(FILTER_DIRS:%=%/%.o),$(ALLOBJ))
 
 CORELDFLAGS += $(MAIN_LDFLAGS) -pie --no-dynamic-linker \
 	--unresolved-symbols=report-all \

@@ -6,7 +6,6 @@
 
 #include <syslinux/firmware.h>
 #include <stdlib.h>
-#include <dprintf.h>
 #include "malloc.h"
 
 #include <stdio.h>
@@ -67,38 +66,14 @@ __free_block(struct free_arena_header *ah)
     return ah;
 }
 
-void bios_free(void *ptr)
+__export void free(void *ptr)
 {
     struct free_arena_header *ah;
 
     ah = (struct free_arena_header *)
         ((struct arena_header *)ptr - 1);
 
-#ifdef DEBUG_MALLOC
-    if (ah->a.magic != ARENA_MAGIC)
-	dprintf("failed free() magic check: %p\n", ptr);
-
-    if (ARENA_TYPE_GET(ah->a.attrs) != ARENA_TYPE_USED)
-	dprintf("invalid arena type: %d\n", ARENA_TYPE_GET(ah->a.attrs));
-#endif
-
     __free_block(ah);
-}
-
-__export void free(void *ptr)
-{
-#ifdef DEBUG_MALLOC
-    dprintf("free(%p) @ %p\n", ptr, __builtin_return_address(0));
-#endif
-
-    if ( !ptr )
-        return;
-
-    sem_down(&__malloc_semaphore, 0);
-    firmware->mem->free(ptr);
-    sem_up(&__malloc_semaphore);
-
-  /* Here we could insert code to return memory to the system. */
 }
 
 /*
@@ -114,10 +89,6 @@ void __inject_free_block(struct free_arena_header *ah)
     size_t a_end = (size_t) ah + ARENA_SIZE_GET(ah->a.attrs);
     size_t n_end;
 
-    dprintf("inject: %#zx bytes @ %p, heap %u (%p)\n",
-	    ARENA_SIZE_GET(ah->a.attrs), ah,
-	    ARENA_HEAP_GET(ah->a.attrs), head);
-
     sem_down(&__malloc_semaphore, 0);
 
     for (nah = head->a.next ; nah != head ; nah = nah->a.next) {
@@ -130,8 +101,6 @@ void __inject_free_block(struct free_arena_header *ah)
         /* Is this block entirely beyond nah? */
         if ((size_t) ah >= n_end)
             continue;
-
-	printf("conflict:ah: %p, a_end: %p, nah: %p, n_end: %p\n", ah, a_end, nah, n_end);
 
         /* Otherwise we have some sort of overlap - reject this block */
 	sem_up(&__malloc_semaphore);
@@ -152,14 +121,14 @@ void __inject_free_block(struct free_arena_header *ah)
 /*
  * Free all memory which is tagged with a specific tag.
  */
-static void __free_tagged(malloc_tag_t tag) {
+__export void __free_tagged(malloc_tag_t tag)
+{
     struct free_arena_header *fp, *head;
     int i;
 
     sem_down(&__malloc_semaphore, 0);
 
     for (i = 0; i < NHEAP; i++) {
-	dprintf("__free_tagged(%u) heap %d\n", tag, i);
 	head = &__core_malloc_head[i];
 	for (fp = head->a.next ; fp != head ; fp = fp->a.next) {
 	    if (ARENA_TYPE_GET(fp->a.attrs) == ARENA_TYPE_USED &&
@@ -169,12 +138,4 @@ static void __free_tagged(malloc_tag_t tag) {
     }
 
     sem_up(&__malloc_semaphore);
-    dprintf("__free_tagged(%u) done\n", tag);
-}
-
-void comboot_cleanup_lowmem(com32sys_t *regs)
-{
-    (void)regs;
-
-    __free_tagged(MALLOC_MODULE);
 }

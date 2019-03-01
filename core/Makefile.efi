@@ -21,13 +21,11 @@ BTARGET  = syslinux.efi
 # The corresponding ELF files
 ETARGET  = efi/syslinux.elf
 
-# Export library files
-LIBCORE_FILES = libcore.so libcore.weak
-
-CORE_LIBOBJS  = $(ALLOBJ)
-
 CORELDFLAGS =
 CORE_LIB	= efi/libsyslinux.a
+
+CORE_LIBS += $(objdir)/com32/efi/lib/libgnuefi.a \
+	     $(objdir)/com32/efi/lib/libefi.a
 
 INCLUDE += -I$(SRC)/efi
 CFLAGS  += $(DATE_DEFS)
@@ -36,15 +34,9 @@ CFLAGS  += $(DATE_DEFS)
 syslinux.efi: efi/syslinux.elf $(PREPCORE)
 	$(PREPCORE) $< $@
 
-wrapper: wrapper.c wrapper.h
-	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) -o $@ $< $(LIBS_FOR_BUILD)
+CORELDSCRIPT = $(SRC)/efi/arch/$(ARCH)/syslinux.ld
 
-CORELDSCRIPT = $(LDSCRIPT)
-
-# Assembly file to force certain symbols to be exported even if
-# they are not used by the core.
-EXPORT = export.o
-
-$(ETARGET): $(CORE_LIB)
-	$(LD) $(CORELDFLAGS) --strip-debug -o $@ $^ \
-		-L$(objdir)/com32/efi/lib -lgnuefi -lefi
+$(ETARGET): $(CORE_LIB) $(CORE_LIBS) $(CORELDSCRIPT)
+	$(LD) $(CORELDFLAGS) --strip-debug -o $@ \
+		--whole-archive $(CORE_LIB) --no-whole-archive \
+		--start-group $(CORE_LIBS) --end-group > $*.map

@@ -393,9 +393,7 @@ extern uint16_t *bios_free_mem;
 void efi_init(void)
 {
 	/* XXX timer */
-	*bios_free_mem = 0;
 	syslinux_memscan_add(&efi_memscan);
-	mem_init();
 }
 
 char efi_getchar(char *hi)
@@ -1245,12 +1243,6 @@ static void serialcfg(uint16_t *iobase, uint16_t *divisor, uint16_t *flowctl)
 
 extern struct vesa_ops efi_vesa_ops;
 
-struct mem_ops efi_mem_ops = {
-	.malloc = efi_malloc,
-	.realloc = efi_realloc,
-	.free = efi_free,
-};
-
 struct firmware efi_fw = {
 	.init = efi_init,
 	.disk_init = efi_disk_init,
@@ -1260,7 +1252,6 @@ struct firmware efi_fw = {
 	.adv_ops = &efi_adv_ops,
 	.boot_linux = efi_boot_linux,
 	.vesa = &efi_vesa_ops,
-	.mem = &efi_mem_ops,
 };
 
 static inline void syslinux_register_efi(void)
