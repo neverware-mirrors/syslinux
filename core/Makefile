@@ -28,7 +28,7 @@ INCLUDE  += -I$(SRC)/include -I$(com32)/lib \
 CODEPAGE = cp865
 
 # The targets to build in this directory...
-BTARGET  = kwdhash.gen ldlinux.bss ldlinux.sys \
+BTARGET  = ldlinux.bss ldlinux.sys \
 	   isolinux.bin isolinux-debug.bin pxelinux.0 lpxelinux.0
 
 # The corresponding ELF files
@@ -43,7 +43,7 @@ NASMHDR	 := $(sort $(shell find $(SRC) -name '*.inc' -print))
 CSRC	 := $(sort $(shell find $(SRC) -name '*.c' -print))
 SSRC	 := $(sort $(shell find $(SRC) -name '*.S' -print))
 CHDR	 := $(sort $(shell find $(SRC) -name '*.h' -print))
-OTHERSRC := keywords
+OTHERSRC :=
 ALLSRC    = $(NASMSRC) $(NASMHDR) $(CSRC) $(SSRC) $(CHDR) $(OTHERSRC)
 
 COBJ	 := $(subst $(SRC)/,,$(patsubst %.c,%.o,$(CSRC)))
@@ -110,9 +110,6 @@ endif
 
 makeoutputdirs:
 	@mkdir -p $(sort $(dir $(COBJ) $(SOBJ)))
-
-kwdhash.gen: keywords genhash.pl
-	$(PERL) $(SRC)/genhash.pl < $(SRC)/keywords > $(OBJ)/kwdhash.gen
 
 ifeq ($(FWCLASS),BIOS)
 
