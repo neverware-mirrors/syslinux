@@ -31,20 +31,13 @@ OBJS = main.o cli.o readconfig.o refstr.o colors.o getadv.o adv.o \
 # For some reason ldlinux.elf is deleted even with .PRECIOUS, which
 # breaks the dependencies later on. List it explicitly in the all target
 # to force it to be kept.
-all: $(LDLINUX) ldlinux.elf ldlinux_lnx.a
+all: $(LDLINUX) ldlinux.elf
 
 ldlinux.elf: $(OBJS) $(LDLINUX_LIBS)
 	$(LD) $(LDFLAGS) $(SHARED) -soname '$(LDLINUX)' -o $@ $(OBJS) $(LDLINUX_LIBS)
 
 $(LDLINUX): ldlinux.elf
 	$(OBJCOPY) --strip-debug --strip-unneeded $< $@
-
-LNXCFLAGS += -D__export='__attribute__((visibility("default")))'
-LNXLIBOBJS = get_key.lo
-ldlinux_lnx.a: $(LNXLIBOBJS)
-	rm -f $@
-	$(AR) cq $@ $(LNXLIBOBJS)
-	$(RANLIB) $@
 
 tidy dist:
 	rm -f *.o *.lo *.a *.lst .*.d 

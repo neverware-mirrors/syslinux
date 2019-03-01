@@ -15,7 +15,6 @@
 ## COM32 standard modules
 ##
 
-VPATH = $(SRC)
 include $(MAKEDIR)/elf.mk
 
 # BIOS-specific modules
@@ -40,7 +39,7 @@ TESTFILES =
 all: $(MODULES) $(TESTFILES)
 
 OBJS_dmitest = dmi_utils.o
-dmi_utils.elf: $(OBJS_dmitest)
+dmitest.elf: $(OBJS_dmitest)
 
 tidy dist:
 	rm -f *.o *.lo *.a *.lst *.elf .*.d *.tmp
