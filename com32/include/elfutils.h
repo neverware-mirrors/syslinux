@@ -67,7 +67,7 @@ typedef Elf64_Sym		Elf_Sym;
 typedef Elf64_Ehdr		Elf_Ehdr;
 typedef Elf64_Phdr		Elf_Phdr;
 typedef Elf64_Rel		Elf_Rel;
-typedef Elf64_Bwword		Elf_Bword;
+typedef Elf64_Bword		Elf_Bword;
 # define ELF_R_SYM(x)		ELF64_R_SYM(x)
 # define ELF_R_TYPE(x)		ELF64_R_TYPE(x)
 #else

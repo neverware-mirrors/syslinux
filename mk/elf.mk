@@ -30,7 +30,6 @@ ifeq ($(ARCH),i386)
 endif
 ifeq ($(ARCH),x86_64)
 	GCCOPT += -m64 -march=x86-64
-	GCCOPT += $(call gcc_ok,-march=x86-64)
 # let preferred-stack-boundary be default (=4)
 	NASMFLAGS += -f elf64
 endif
@@ -75,7 +74,7 @@ INCLUDE += -nostdinc -iwithprefix include -I$(SRC) \
 	     -I$(com32)/include/sys $(GPLINCLUDE) \
 	     -I$(core)/include -I$(core)/$(fwclass)/include -I$(objdir)
 
-OPTFLAGS  = -Os -march=$(ARCH) -falign-functions=0 -falign-jumps=0 \
+OPTFLAGS  = -Os -falign-functions=0 -falign-jumps=0 \
 	    -falign-labels=0 -ffast-math -fomit-frame-pointer
 WARNFLAGS = $(GCCWARN) -Wpointer-arith -Wwrite-strings \
 	    -Wstrict-prototypes -Winline
