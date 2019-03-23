@@ -18,10 +18,6 @@ all: libefi
 EFISRC  = $(SRC)/gnu-efi
 EFIOBJ  = $(OBJ)/gnu-efi
 
-# This is a hack due to missing rules in gnu-efi/Make.rules
-# Also note make rather than $(MAKE) below.
-unexport MAKEFLAGS
-
 EFIMAKE = make -C '$(EFIOBJ)' \
 	  SRCDIR='$(EFISRC)' \
 	  HOSTCC='$(CC_FOR_BUILD)' \
