@@ -690,16 +690,6 @@ static void bios_cleanup_hardware(void)
 	sirq_cleanup();
 }
 
-extern void *bios_malloc(size_t, enum heap, size_t);
-extern void *bios_realloc(void *, size_t);
-extern void bios_free(void *);
-
-struct mem_ops bios_mem_ops = {
-	.malloc = bios_malloc,
-	.realloc = bios_realloc,
-	.free = bios_free,
-};
-
 struct firmware bios_fw = {
 	.init = bios_init,
 	.adjust_screen = bios_adjust_screen,
@@ -709,8 +699,7 @@ struct firmware bios_fw = {
 	.i_ops = &bios_input_ops,
 	.get_serial_console_info = bios_get_serial_console_info,
 	.adv_ops = &bios_adv_ops,
-	.vesa = &bios_vesa_ops,
-	.mem = &bios_mem_ops,
+	.vesa = &bios_vesa_ops
 };
 
 void syslinux_register_bios(void)

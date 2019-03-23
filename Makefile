@@ -68,7 +68,7 @@ $(if $(cd-output),, \
 #
 
 MAKEDIR = $(topdir)/mk
-export MAKEDIR topdir OBJDIR
+export MAKEDIR topdir
 
 include $(MAKEDIR)/syslinux.mk
 
@@ -151,7 +151,7 @@ MODULES = com32/menu/*.c32 com32/modules/*.c32 com32/mboot/*.c32 \
 	com32/cmenu/libmenu/*.c32 ldlinux/$(LDLINUX)
 endif
 
-export FIRMWARE FWCLASS ARCH BITS
+export FIRMWARE firmware FWCLASS fwclass ARCH BITS
 
 # List of module objects that should be installed for all derivatives
 INSTALLABLE_MODULES = $(MODULES)
@@ -174,34 +174,36 @@ BOBJECTS = \
 # files that depend only on the B phase, but may have to be regenerated
 # for "make installer".
 
-ifeq ($(FWCLASS),EFI)
-
-BSUBDIRS = codepage lzo core ldlinux com32 mbr sample efi txt
+BSUBDIRS = codepage prepcore/$(fwclass) core ldlinux com32 mbr sample txt
 ISUBDIRS =
 
-INSTALLSUBDIRS = efi
+INSTALL_AUX = $(INSTALLABLE_MODULES)
 
-NETINSTALLABLE = efi/syslinux.efi $(INSTALLABLE_MODULES)
+# Things to install in /tftpboot
+NETINSTALLABLE = $(INSTALLABLE_MODULES)
 
-else
+ifeq ($(FWCLASS),EFI)
+INSTALL_AUX    += core/syslinux.efi
+NETINSTALLABLE += core/syslinux.efi
+endif
+ifeq ($(FWCLASS),BIOS)
 
-BSUBDIRS = codepage lzo core ldlinux com32 memdisk mbr sample \
-	   diag libinstaller dos win32 win64 dosutil txt
+BSUBDIRS += libinstaller dos win32 win64 dosutil
 
 IOBJECTS = utils/gethostip utils/isohybrid utils/mkdiskimage \
 	mtools/syslinux linux/syslinux extlinux/extlinux
 ISUBDIRS = libinstaller mtools linux extlinux utils
 
 # Things to install in /usr/bin
-INSTALL_BIN   =	mtools/syslinux
+INSTALL_BIN   += mtools/syslinux
 # Things to install in /sbin
-INSTALL_SBIN  = extlinux/extlinux
+INSTALL_SBIN  += extlinux/extlinux
 # Things to install in /usr/lib/syslinux
-INSTALL_AUX   =	core/pxelinux.0 \
+INSTALL_AUX   += core/pxelinux.0 \
 		core/isolinux.bin core/isolinux-debug.bin \
 		dos/syslinux.com core/lpxelinux.0 \
-		mbr/*.bin $(INSTALLABLE_MODULES)
-INSTALL_AUX_OPT = win32/syslinux.exe win64/syslinux64.exe
+		mbr/*.bin
+INSTALL_AUX_OPT += win32/syslinux.exe win64/syslinux64.exe
 INSTALL_DIAG  =	diag/mbr/handoff.bin \
 		diag/geodsp/geodsp1s.img.xz diag/geodsp/geodspms.img.xz
 
@@ -211,9 +213,7 @@ INSTALLSUBDIRS = com32 utils dosutil
 # Things to install in /boot/extlinux
 EXTBOOTINSTALL = $(INSTALLABLE_MODULES)
 
-# Things to install in /tftpboot
-NETINSTALLABLE = core/pxelinux.0 core/lpxelinux.0 \
-		 $(INSTALLABLE_MODULES)
+NETINSTALLABLE += core/pxelinux.0 core/lpxelinux.0
 
 endif # ifeq ($(FWCLASS),EFI)
 
@@ -252,7 +252,7 @@ bios:
 	@mkdir -p $(OBJ)/bios
 	$(MAKE) -C $(OBJ)/bios -f $(SRC)/Makefile SRC="$(SRC)" \
 		objdir=$(OBJ)/bios OBJ=$(OBJ)/bios \
-		FIRMWARE=BIOS FWCLASS=BIOS \
+		FIRMWARE=BIOS firmware=bios FWCLASS=BIOS fwclass=bios \
 		ARCH=i386 LDLINUX=ldlinux.c32 $(MAKECMDGOALS)
 
 efi32:
@@ -260,7 +260,7 @@ efi32:
 	$(MAKE) -C $(OBJ)/efi32 -f $(SRC)/Makefile SRC="$(SRC)" \
 		objdir=$(OBJ)/efi32 OBJ=$(OBJ)/efi32 \
 		ARCH=i386 BITS=32 LDLINUX=ldlinux.e32 \
-		FIRMWARE=EFI32 FWCLASS=EFI \
+		FIRMWARE=EFI32 firmware=efi32 FWCLASS=EFI fwclass=efi \
 		$(MAKECMDGOALS)
 
 efi64:
@@ -268,7 +268,7 @@ efi64:
 	$(MAKE) -C $(OBJ)/efi64 -f $(SRC)/Makefile SRC="$(SRC)" \
 		objdir=$(OBJ)/efi64 OBJ=$(OBJ)/efi64 \
 		ARCH=x86_64 BITS=64 LDLINUX=ldlinux.e64 \
-		FIRMWARE=EFI64 FWCLASS=EFI \
+		FIRMWARE=EFI64 firmware=efi64 FWCLASS=EFI fwclass=efi \
 		$(MAKECMDGOALS)
 
 else # FIRMWARE

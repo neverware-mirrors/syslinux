@@ -5,6 +5,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifdef __FIRMWARE_BIOS__
+# include <lwip/opt.h>
+# include <lwip/api.h>
+#else
+# define DNS_MAX_SERVERS 4
+typedef int err_t;
+#endif
+
 void net_core_init(void);
 void net_parse_dhcp(void);
 

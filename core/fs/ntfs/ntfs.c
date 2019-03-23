@@ -31,7 +31,6 @@
 #include <klibc/compiler.h>
 #include <ctype.h>
 
-#include "codepage.h"
 #include "ntfs.h"
 #include "runlist.h"
 

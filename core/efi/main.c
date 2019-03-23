@@ -17,11 +17,10 @@
 #include "efi_pxe.h"
 
 __export uint16_t PXERetry;
-__export char copyright_str[] = "Copyright (C) 2011-" YEAR_STR "\n";
+__export const char copyright_str[] = "Copyright (C) 2011-" YEAR_STR "\n";
 uint8_t SerialNotice = 1;
-__export char syslinux_banner[] = "Syslinux " VERSION_STR " (EFI; " DATE_STR ")\n";
+__export const char syslinux_banner[] = "Syslinux " VERSION_STR " (EFI; " DATE_STR ")\n";
 char CurrentDirName[CURRENTDIR_MAX];
-struct com32_sys_args __com32;
 
 uint32_t _IdleTimer = 0;
 char __lowmem_heap[32];
@@ -394,9 +393,7 @@ extern uint16_t *bios_free_mem;
 void efi_init(void)
 {
 	/* XXX timer */
-	*bios_free_mem = 0;
 	syslinux_memscan_add(&efi_memscan);
-	mem_init();
 }
 
 char efi_getchar(char *hi)
@@ -1246,12 +1243,6 @@ static void serialcfg(uint16_t *iobase, uint16_t *divisor, uint16_t *flowctl)
 
 extern struct vesa_ops efi_vesa_ops;
 
-struct mem_ops efi_mem_ops = {
-	.malloc = efi_malloc,
-	.realloc = efi_realloc,
-	.free = efi_free,
-};
-
 struct firmware efi_fw = {
 	.init = efi_init,
 	.disk_init = efi_disk_init,
@@ -1261,7 +1252,6 @@ struct firmware efi_fw = {
 	.adv_ops = &efi_adv_ops,
 	.boot_linux = efi_boot_linux,
 	.vesa = &efi_vesa_ops,
-	.mem = &efi_mem_ops,
 };
 
 static inline void syslinux_register_efi(void)
@@ -1280,7 +1270,7 @@ extern char __bss_end[];
 
 static void efi_setcwd(CHAR16 *dp)
 {
-	CHAR16 *c16;
+	const CHAR16 *c16;
 	char *c8;
 	int i, j;
 

@@ -1,13 +1,16 @@
-ifdef PRECORE
-SUBDIRS = tools lib
-else
-SUBDIRS = tools lib libutil gpllib libupload modules mboot \
-	  menu samples elflink rosh cmenu lua/src
+PRECOREDIRS       := tools lib
+PRECOREDIRS_EFI   := efi
+PRECOREDIRS_BIOS  :=
 
-ifneq ($(FWCLASS),EFI)
+POSTCOREDIRS      := libutil gpllib libupload modules mboot \
+	  	    menu samples elflink rosh cmenu lua/src
+POSTCOREDIRS_EFI  :=
 # These tools are no applicable to EFI, or need serious porting
-SUBDIRS += hdt sysdump chain
-endif
+POSTCOREDIRS_BIOS = hdt sysdump chain
+
+SUBDIRS  = $(PRECOREDIRS) $(PRECOREDIRS_$(FWCLASS))
+ifndef PRECORE
+SUBDIRS += $(POSTCOREDIRS) $(POSTCOREDIRS_$(FWCLASS))
 endif
 
 all tidy dist clean spotless install: subdirs
@@ -19,8 +22,9 @@ $(SUBDIRS):
 	$(MAKE) -C $(OBJ)/$@ SRC='$(SRC)/$@' OBJ='$(OBJ)/$@' \
 		-f '$(SRC)/$@/Makefile' $(MAKECMDGOALS)
 
-# Parallel dependencies 
-lib: tools
+# Parallel dependencies
+LIBDEP_EFI := efi
+lib: tools $(LIBDEP_$(FWCLASS))
 
 gpllib libupload libutil: lib
 cmenu: lib libutil

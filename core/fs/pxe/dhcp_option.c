@@ -2,9 +2,9 @@
 #include <string.h>
 #include <core.h>
 #include <x86/cpu.h>
-#include <lwip/opt.h>		/* DNS_MAX_SERVERS */
 #include <dprintf.h>
 #include "core_pxe.h"
+#include "net.h"
 
 char LocalDomain[256];
 

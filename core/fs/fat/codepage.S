@@ -2,5 +2,5 @@
 	.globl	codepage
 	.hidden	codepage
 codepage:
-	.incbin "codepage.cp"
+	.incbin CODEPAGE
 	.size	codepage, .-codepage

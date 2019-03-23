@@ -1,0 +1,88 @@
+## -*- makefile-gmake -*- -------------------------------------------------
+##
+##   Copyright 1998-2009 H. Peter Anvin - All Rights Reserved
+##   Copyright 2009-2019 Intel Corporation; author: H. Peter Anvin
+##
+##   This program is free software; you can redistribute it and/or modify
+##   it under the terms of the GNU General Public License as published by
+##   the Free Software Foundation, Inc., 53 Temple Place Ste 330,
+##   Boston MA 02111-1307, USA; either version 2 of the License, or
+##   (at your option) any later version; incorporated herein by reference.
+##
+## -----------------------------------------------------------------------
+
+#
+# BIOS-specific Makefile for the Syslinux core
+#
+
+INCLUDE  += -I$(SRC)/bios/lwip/src/include \
+	    -I$(SRC)/bios/lwip/src/include/ipv4
+
+# The targets to build in this directory...
+BTARGET  := ldlinux.bss ldlinux.sys \
+	   isolinux.bin isolinux-debug.bin pxelinux.0 lpxelinux.0
+
+# The corresponding ELF files
+ETARGET  := $(patsubst $(SRC)/bios/main/%.asm,bios/%.elf,\
+	    $(wildcard $(SRC)/bios/main/*.asm))
+
+CORE_PXE_DIRS   := bios/pxe fs/pxe
+LPXELINUX_DIRS  := bios/lwip
+PXELINUX_DIRS   := bios/legacynet
+MAIN_DIRS       := bios/main
+FILTER_DIRS     := $(CORE_PXE_DIRS) $(LPXELINUX_DIRS) \
+		   $(PXELINUX_DIRS) $(MAIN_DIRS)
+
+CORE_PXE_OBJS   := $(filter $(CORE_PXE_DIRS:%=%/%.o),$(ALLOBJ))
+LPXELINUX_OBJS  := $(filter $(LPXELINUX_DIRS:%=%/%.o),$(ALLOBJ))
+PXELINUX_OBJS   := $(filter $(PXELINUX_DIRS:%=%/%.o),$(ALLOBJ))
+MAIN_OBJS       := $(filter $(MAIN_DIRS:%=%/%.o),$(ALLOBJ))
+
+AUXLIBS      	:= bios/pxelinux.a bios/lpxelinux.a
+CORELDSCRIPT	:= $(SRC)/bios/syslinux.ld
+
+CORE_LIB	:= bios/libsyslinux.a
+
+%.raw: %.elf
+	$(OBJCOPY) -O binary -S $< $@
+
+%.bin: %.raw $(PREPCORE)
+	$(PREPCORE) $< $@
+
+NASMFLAGS += $(DATE_DEFS) -I$(SRC)/bios/ -I$(objdir)/ -I$(OBJ)/
+
+%.o: %.asm $(objdir)/version.gen
+
+# Assembly file to force certain symbols to be exported even if
+# they are not used by the core.
+EXPORT = bios/export.o
+
+$(ETARGET): bios/%.elf: bios/main/%.o bios/main/%-c.o $(EXPORT) bios/%.a \
+	$(CORE_LIB) $(CORE_LIBS) $(CORELDSCRIPT)
+	$(LD) $(CORELDFLAGS) -o $@ $(filter %.o,$^) \
+		--start-group $(filter %.a,$^) --end-group \
+		> bios/$*.map
+	if [ `$(NM) -D -u $@ | wc -l` -ne 0 ]; then \
+		$(NM) -D -u $@ 1>&2; rm -f $@; false; fi
+	$(OBJDUMP) -h $@ > bios/$*.sec
+	$(PERL) $(SRC)/lstadjust.pl bios/main/$*.lsr bios/$*.sec bios/$*.lst
+
+# Legacy network stack
+bios/pxelinux.a: $(CORE_PXE_OBJS) $(PXELINUX_OBJS)
+
+# LwIP network stack
+bios/lpxelinux.a: $(CORE_PXE_OBJS) $(LPXELINUX_OBJS) 
+
+# Otherwise, no special library needed, a null library will be created
+
+%.0: bios/%.bin
+	cp -f $< $@
+
+%.bin: bios/%.bin
+	cp -f $< $@
+
+ldlinux.bss: bios/ldlinux.bin
+	dd if=$< of=$@ bs=512 count=1
+
+ldlinux.sys: bios/ldlinux.bin
+	dd if=$< of=$@ bs=512 skip=2

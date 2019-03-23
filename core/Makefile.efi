@@ -1,0 +1,42 @@
+## -*- makefile -*- ------------------------------------------------------
+##
+##   Copyright 1998-2009 H. Peter Anvin - All Rights Reserved
+##   Copyright 2009-2019 Intel Corporation; author: H. Peter Anvin
+##
+##   This program is free software; you can redistribute it and/or modify
+##   it under the terms of the GNU General Public License as published by
+##   the Free Software Foundation, Inc., 53 Temple Place Ste 330,
+##   Boston MA 02111-1307, USA; either version 2 of the License, or
+##   (at your option) any later version; incorporated herein by reference.
+##
+## -----------------------------------------------------------------------
+
+#
+# EFI-specific Makefile for the Syslinux core
+#
+
+# The targets to build in this directory...
+BTARGET  = syslinux.efi
+
+# The corresponding ELF files
+ETARGET  = efi/syslinux.elf
+
+CORELDFLAGS =
+CORE_LIB	= efi/libsyslinux.a
+
+CORE_LIBS += $(objdir)/com32/efi/lib/libgnuefi.a \
+	     $(objdir)/com32/efi/lib/libefi.a
+
+INCLUDE += -I$(SRC)/efi
+CFLAGS  += $(DATE_DEFS)
+
+# Build the wrapper app and wrap our .so to produce a .efi
+syslinux.efi: efi/syslinux.elf $(PREPCORE)
+	$(PREPCORE) $< $@
+
+CORELDSCRIPT = $(SRC)/efi/arch/$(ARCH)/syslinux.ld
+
+$(ETARGET): $(CORE_LIB) $(CORE_LIBS) $(CORELDSCRIPT)
+	$(LD) $(CORELDFLAGS) --strip-debug -o $@ \
+		--whole-archive $(CORE_LIB) --no-whole-archive \
+		--start-group $(CORE_LIBS) --end-group > $*.map

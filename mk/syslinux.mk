@@ -75,6 +75,8 @@ MKISOFS  = mkisofs
 SED	 = sed
 WGET	 = wget
 
+CC_FOR_BUILD ?= $(CC)
+
 com32    = $(topdir)/com32
 
 # Architecture definition

@@ -27,7 +27,6 @@
 #include <klibc/compiler.h>
 #include <ctype.h>
 
-#include "codepage.h"
 #include "xfs_types.h"
 #include "xfs_sb.h"
 #include "xfs_ag.h"

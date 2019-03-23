@@ -20,7 +20,6 @@
 #include <minmax.h>
 #include <x86/cpu.h>
 #include <netinet/in.h>
-#include <lwip/api.h>
 #include "core.h"
 #include "fs.h"
 #include "core_pxe.h"

@@ -14,22 +14,27 @@
 ## ELF common configurables
 ##
 
+# Needs to start out as null otherwise we get a recursive error
+GCCOPT   :=
+
 include $(MAKEDIR)/syslinux.mk
+include $(MAKEDIR)/$(fwclass).mk
 
 # Support IA32 and x86_64 platforms with one build
 # Set up architecture specifics; for cross compilation, set ARCH as apt
-GCCOPT := $(call gcc_ok,-std=gnu99,)
+GCCOPT += $(call gcc_ok,-std=gnu99,)
 ifeq ($(ARCH),i386)
-	GCCOPT += $(call gcc_ok,-m32,)
-	GCCOPT += $(call gcc_ok,-march=i386)
+	GCCOPT += -m32 -march=i386
 	GCCOPT += $(call gcc_ok,-mpreferred-stack-boundary=2,)
+	NASMFLAGS += -f elf
 endif
 ifeq ($(ARCH),x86_64)
-	GCCOPT += $(call gcc_ok,-m64,)
-	GCCOPT += $(call gcc_ok,-march=x86-64)
-	#let preferred-stack-boundary be default (=4)
+	GCCOPT += -m64 -march=x86-64
+# let preferred-stack-boundary be default (=4)
+	NASMFLAGS += -f elf64
 endif
 GCCOPT += -Os -fomit-frame-pointer
+GCCOPT += $(call gcc_ok,-mtune=generic,)
 GCCOPT += $(call gcc_ok,-fno-stack-protector,)
 GCCOPT += $(call gcc_ok,-fwrapv,)
 GCCOPT += $(call gcc_ok,-freg-struct-return,)
@@ -43,12 +48,6 @@ GCCOPT += $(call gcc_ok,-falign-jumps=0,-malign-jumps=0)
 GCCOPT += $(call gcc_ok,-falign-labels=0,-malign-labels=0)
 GCCOPT += $(call gcc_ok,-falign-loops=0,-malign-loops=0)
 GCCOPT += $(call gcc_ok,-DNO_PLT -fno-plt -fvisibility=protected)
-
-ifeq ($(FWCLASS),EFI)
-GCCOPT += -mno-red-zone
-else
-GCCOPT += -mregparm=3 -DREGPARM=3
-endif
 
 com32 = $(topdir)/com32
 core = $(topdir)/core
@@ -70,12 +69,12 @@ LIBLDLINUX = $(objdir)/ldlinux/$(LDLINUX)
 LIBCOM32  = $(objdir)/com32/lib/libcom32.c32
 LIBUTIL   = $(objdir)/com32/libutil/libutil.c32
 
-INCLUDE =  -nostdinc -iwithprefix include -I$(SRC) \
+INCLUDE += -nostdinc -iwithprefix include -I$(SRC) \
 	     -I$(com32)/libutil/include -I$(com32)/include \
-	     -I$(com32)/include/sys $(GPLINCLUDE) -I$(core)/include \
-	     -I$(objdir)
+	     -I$(com32)/include/sys $(GPLINCLUDE) \
+	     -I$(core)/include -I$(core)/$(fwclass)/include -I$(objdir)
 
-OPTFLAGS  = -Os -march=$(ARCH) -falign-functions=0 -falign-jumps=0 \
+OPTFLAGS  = -Os -falign-functions=0 -falign-jumps=0 \
 	    -falign-labels=0 -ffast-math -fomit-frame-pointer
 WARNFLAGS = $(GCCWARN) -Wpointer-arith -Wwrite-strings \
 	    -Wstrict-prototypes -Winline
@@ -83,7 +82,7 @@ WARNFLAGS = $(GCCWARN) -Wpointer-arith -Wwrite-strings \
 REQFLAGS  = $(GCCOPT) -g -D__COM32__ -D__FIRMWARE_$(FIRMWARE)__ \
 	     -DLDLINUX=\"$(LDLINUX)\" $(INCLUDE)
 
-CFLAGS     = $(REQFLAGS) $(OPTFLAGS) $(WARNFLAGS)
+CFLAGS     = $(REQFLAGS) $(OPTFLAGS) $(WARNFLAGS) $(FWFLAGS)
 
 SFLAGS     = $(REQFLAGS) -D__ASSEMBLY__
 LDSCRIPT   	= $(com32)/lib/$(ARCH)/elf.ld
@@ -94,9 +93,7 @@ MAIN_LDFLAGS	= -m elf_$(ARCH) -Bsymbolic --hash-style=gnu \
 LDFLAGS    = $(MAIN_LDFLAGS) -T $(LDSCRIPT)
 
 ifeq ($(ARCH),i386)
-NASMFLAGS += -f elf
 else
-NASMFLAGS += -f elf64
 endif
 NASMDEBUG  = -g -F dwarf
 NASMFLAGS += $(NASMDEBUG) -D__$(ARCH)__ -I$(SRC)/ $(filter -D%,$(CFLAGS))
