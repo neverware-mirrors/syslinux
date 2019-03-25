@@ -144,6 +144,17 @@ CORELIBOBJS = \
 	$(LIBENTRY_OBJS) \
 	$(LIBMODULE_OBJS)
 
+# Firmware-specific modules
+FWSRCS := $(sort $(shell find '$(SRC)/$(fwclass)' \
+	-name $(ARCH) -type d -true -o \
+	-regex '.*/arch/[^/]+' -type d -prune -o \
+	-type -f -print))
+FWCSRCS := $(filter %.c, $(FWSRCS))
+FWSSRCS := $(filter %.S, $(FWSRCS))
+FWOBJS  := $(FWCSRCS:%(SRC)/%.c=%.o) $(FWSSRCS:%(SRC)/%.S=%.o)
+
+CORELIBOBJS += $(FWOBJS)
+
 ifneq ($(FWCLASS),EFI)
 # For EFI, these are part of gnu-efi
 CORELIBOBJS += $(ARCH)/setjmp.o memcpy.o memset.o

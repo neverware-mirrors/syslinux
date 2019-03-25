@@ -151,10 +151,10 @@ static size_t calc_cmdline_offset(const struct syslinux_memmap *mmap,
     return (0x9ff0 - cmdline_size) & ~15; /* Legacy value: pure hope... */
 }
 
-int bios_boot_linux(void *kernel_buf, size_t kernel_size,
-		    struct initramfs *initramfs,
-		    struct setup_data *setup_data,
-		    char *cmdline)
+int syslinux_boot_linux(void *kernel_buf, size_t kernel_size,
+			struct initramfs *initramfs,
+			struct setup_data *setup_data,
+			char *cmdline)
 {
     struct linux_header hdr, *whdr;
     size_t real_mode_size, prot_mode_size;
@@ -511,17 +511,4 @@ bail:
     syslinux_free_memmap(mmap);
     syslinux_free_memmap(amap);
     return -1;
-}
-
-int syslinux_boot_linux(void *kernel_buf, size_t kernel_size,
-			struct initramfs *initramfs,
-			struct setup_data *setup_data,
-			char *cmdline)
-{
-    if (firmware->boot_linux)
-	return firmware->boot_linux(kernel_buf, kernel_size, initramfs,
-				    setup_data, cmdline);
-
-    return bios_boot_linux(kernel_buf, kernel_size, initramfs,
-			   setup_data, cmdline);
 }

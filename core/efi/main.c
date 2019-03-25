@@ -459,7 +459,7 @@ struct efi_info {
 
 #define BOOT_SIGNATURE	0xaa55
 #define SYSLINUX_EFILDR	0x30	/* Is this published value? */
-#define DEFAULT_TIMER_TICK_DURATION 	500000 /* 500000 == 500000 * 100 * 10^-9 == 50 msec */
+#define DEFAULT_TIMER_TICK_DURATION	500000 /* 500000 == 500000 * 100 * 10^-9 == 50 msec */
 #define DEFAULT_MSTIMER_INC		0x32	/* 50 msec */
 struct e820_entry {
 	uint64_t start;
@@ -486,7 +486,7 @@ struct boot_params {
  * emalloc()/efree, alloc_pages/free_pages
  * allocate_pool()/free_pool()
  * memory_map()
- */ 
+ */
 extern void kernel_jump(EFI_PHYSICAL_ADDRESS kernel_start,
 			       struct boot_params *boot_params);
 #if __SIZEOF_POINTER__ == 4
@@ -1097,23 +1097,23 @@ static int exit_boot(struct boot_params *bp)
 	return 0;
 }
 
-/* efi_boot_linux: 
+/* syslinux_boot_linux:
  * Boots the linux kernel using the image and parameters to boot with.
  * The EFI boot loader is reworked taking the cue from
  * http://git.kernel.org/?p=boot/efilinux/efilinux.git on the need to
  * cap key kernel data structures at * 0x3FFFFFFF.
  * The kernel image, kernel command line and boot parameter block are copied
  * into allocated memory areas that honor the address capping requirement
- * prior to kernel handoff. 
+ * prior to kernel handoff.
  *
  * FIXME
  * Can we move this allocation requirement to com32 linux loader in order
  * to avoid double copying kernel image?
  */
-int efi_boot_linux(void *kernel_buf, size_t kernel_size,
-		   struct initramfs *initramfs,
-		   struct setup_data *setup_data,
-		   char *cmdline)
+int syslinux_boot_linux(void *kernel_buf, size_t kernel_size,
+			struct initramfs *initramfs,
+			struct setup_data *setup_data,
+			char *cmdline)
 {
 	struct linux_header *hdr;
 	struct boot_params *bp;
@@ -1251,7 +1251,6 @@ struct firmware efi_fw = {
 	.i_ops = &efi_iops,
 	.get_serial_console_info = serialcfg,
 	.adv_ops = &efi_adv_ops,
-	.boot_linux = efi_boot_linux,
 	.vesa = &efi_vesa_ops,
 };
 
