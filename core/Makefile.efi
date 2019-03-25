@@ -34,7 +34,7 @@ CFLAGS  += $(DATE_DEFS)
 syslinux.efi: efi/syslinux.elf $(PREPCORE)
 	$(PREPCORE) $< $@
 
-CORELDSCRIPT = $(SRC)/efi/arch/$(ARCH)/syslinux.ld
+CORELDSCRIPT = $(SRC)/efi/$(ARCH)/syslinux.ld
 
 $(ETARGET): $(CORE_LIB) $(CORE_LIBS) $(CORELDSCRIPT)
 	$(LD) $(CORELDFLAGS) --strip-debug -o $@ \

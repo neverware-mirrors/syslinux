@@ -105,7 +105,7 @@ LIBCONSOLE_OBJS = \
 LIBLOAD_OBJS = \
 	syslinux/addlist.o syslinux/freelist.o syslinux/memmap.o	\
 	syslinux/movebits.o syslinux/shuffle.o syslinux/shuffle_pm.o	\
-	syslinux/shuffle_rm.o syslinux/biosboot.o syslinux/zonelist.o	\
+	syslinux/shuffle_rm.o syslinux/zonelist.o	\
 	syslinux/dump_mmap.o syslinux/dump_movelist.o			\
 	\
 	syslinux/run_default.o syslinux/run_command.o			\
@@ -113,7 +113,7 @@ LIBLOAD_OBJS = \
 	\
 	syslinux/loadfile.o syslinux/floadfile.o syslinux/zloadfile.o	\
 	\
-	syslinux/load_linux.o syslinux/initramfs.o			\
+	syslinux/initramfs.o			\
 	syslinux/initramfs_file.o syslinux/initramfs_loadfile.o		\
 	syslinux/initramfs_archive.o
 
@@ -146,19 +146,13 @@ CORELIBOBJS = \
 
 # Firmware-specific modules
 FWSRCS := $(sort $(shell find '$(SRC)/$(fwclass)' \
-	-name $(ARCH) -type d -true -o \
-	-regex '.*/arch/[^/]+' -type d -prune -o \
-	-type -f -print))
+		  $(patsubst %,-name % -type d -prune -o,$(OTHERARCHES)) \
+		  -type f -print))
 FWCSRCS := $(filter %.c, $(FWSRCS))
 FWSSRCS := $(filter %.S, $(FWSRCS))
-FWOBJS  := $(FWCSRCS:%(SRC)/%.c=%.o) $(FWSSRCS:%(SRC)/%.S=%.o)
+FWOBJS  := $(FWCSRCS:$(SRC)/%.c=%.o) $(FWSSRCS:$(SRC)/%.S=%.o)
 
 CORELIBOBJS += $(FWOBJS)
-
-ifneq ($(FWCLASS),EFI)
-# For EFI, these are part of gnu-efi
-CORELIBOBJS += $(ARCH)/setjmp.o memcpy.o memset.o
-endif
 
 ## OPTIONAL OBJECTS, AVAILABLE AS DYNAMIC LINKED MODULES
 # PNG library object files

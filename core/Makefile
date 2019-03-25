@@ -40,8 +40,7 @@ PREPCORE  = $(objdir)/prepcore/$(fwclass)/prepcore
 # All primary source files for the main syslinux files
 SRCFILES  := $(sort $(shell find $(SRCDIRS:%=$(SRC)/%) \
 	        -name tests   -type d -prune -o \
-		-name $(ARCH) -type d -true  -o \
-		-regex '.*/arch/[^/]+' -type d -prune -o \
+		$(patsubst %,-name % -type d -prune -o, $(OTHERARCHES)) \
 		-type f -print))
 NASMSRC	  := $(filter %.asm,$(SRCFILES))
 NASMHDR	  := $(filter %.inc,$(SRCFILES))

@@ -77,6 +77,12 @@ WGET	 = wget
 
 CC_FOR_BUILD ?= $(CC)
 
+# All supported CPU architectures
+ARCHLIST    := i386 x86_64
+
+# The architectures we are not currently building for
+OTHERARCHES := $(filter-out $(ARCH),$(ARCHLIST))
+
 com32    = $(topdir)/com32
 
 # Architecture definition
